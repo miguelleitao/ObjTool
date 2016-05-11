@@ -93,6 +93,7 @@ Vert VMin = { -1e30, -1e30, -1e30 };
 Vert VMax = {  1e30,  1e30,  1e30 };
 Vert Translate = { 0., 0., 0. };
 Vert Scale = { 1., 1., 1. };
+Vert Rotate = { 0., 0., 0. };
 char *Material = NULL;
 char *OutputFile = NULL;
 char *ShadowOutputFile = NULL;
@@ -730,34 +731,34 @@ void SaveObjFile(char *fname, ObjFile *obj) {
 	fout = stdout;
 	int i;
 	int nv=0, nt=0, nn=0;
-printf("vai abrir ficheiro %s\n",fname);
 	if ( fname && *fname ) {
+		printf("vai abrir ficheiro %s\n",fname);
 		fout = fopen(fname,"w");
 		if ( ! fout ) {
 		    fprintf(stderr,"Cannot open output file '%s'\n", fname);
 		    exit(5);
 		}
+	        //printf("    abriu\n");
 	}
-	printf("    abriu\n");
 	for( i=0 ; i<obj->stats.verts ; i++ ) 
 	    if ( obj->counts.verts[i] > 0 ) {
 		fprintf(fout,"v %f %f %f\n", obj->verts[i][0],obj->verts[i][1],obj->verts[i][2]);
 		nv++;
 	    }
-	printf("    gravou verts\n");
+	//printf("    gravou verts\n");
 	for( i=0 ; i<obj->stats.texts ; i++ ) 
 	    if ( obj->counts.texts[i] > 0 ) {
 		fprintf(fout,"vt %f %f %f\n", obj->texts[i][0],obj->texts[i][1],obj->texts[i][2]);
 		nt++;
 	    }
 
-	printf("    gravou text verts\n");
+	//printf("    gravou text verts\n");
 	for( i=0 ; i<obj->stats.norms ; i++ ) 
 	    if ( obj->counts.norms[i] > 0 ) {
 		fprintf(fout,"vn %f %f %f\n", obj->norms[i][0],obj->norms[i][1],obj->norms[i][2]);
 		nn++;
 	    }
-	printf("    gravou norms\n");
+	//printf("    gravou norms\n");
 	int gidx=0,oidx=0,midx=0,lidx=0;
 	for( i=0 ; i<obj->stats.faces ; i++ ) {
 	    int n;
@@ -800,7 +801,6 @@ printf("vai abrir ficheiro %s\n",fname);
 	    }
 	    fprintf(fout,"\n");
 	}
-printf("fechando\n");
 	if ( fout!=stdout ) fclose(fout); 
 }
 
@@ -977,8 +977,12 @@ void Usage() {
     fprintf(stderr,"\t\t-sy value	   scale y\n");
     fprintf(stderr,"\t\t-sz value	   scale z\n");
     fprintf(stderr,"\t\t-s value	   global scale\n"); 
+    fprintf(stderr,"\t\t-rx value	   rotate around xx axis\n");
+    fprintf(stderr,"\t\t-ry value	   rotate around yy axis\n");
+    fprintf(stderr,"\t\t-rz value	   rotate around zz axis\n");
 
-    fprintf(stderr,"\t\t-r                 use relative coords\n");
+
+    fprintf(stderr,"\t\t-R                 use relative coords\n");
     fprintf(stderr,"\t\t-c                 solid cut\n");
     fprintf(stderr,"\t\t-o outfile         output to outfile (default: stdout)\n");
     fprintf(stderr,"\t\t-S shadow_file     shadow output to shadow_file (default: no shadow ouput)\n");
@@ -1088,6 +1092,25 @@ int GetOptions(int argc, char** argv) {
 			    InvalidOption(argv[i]);
 		    }
 		    break;
+	        case 'r':
+		    switch (argv[i][2]) {
+			case 'x':
+			    i++;
+			    Rotate[0] = atof(argv[i]);
+			    break;
+                        case 'y':
+                            i++;
+                            Rotate[1] = atof(argv[i]);
+                            break;
+                        case 'z':
+                            i++;
+                            Rotate[2] = atof(argv[i]);
+                            break;
+			case ' ':
+			case '\0':
+			    InvalidOption(argv[i]);
+                    }
+                    break;
 		case 'm':
 		    i++;
 		    Material = argv[i];
@@ -1109,7 +1132,7 @@ int GetOptions(int argc, char** argv) {
 		case 'c':
 		    SolidCut = 1;
 		    break;
-		case 'r':
+		case 'R':
 		    Relative = 1;
 		    break;
 		case 'v':
