@@ -7,7 +7,7 @@ all: ObjTool
 
 ObjTool: ObjTool.o
 	cc -o $@ -lm $^
-	git add ObjToll.c
+	git add ObjTool.c
 	git commitg
 	git push
 
