@@ -954,6 +954,12 @@ void ProcVerts(ObjFile *obj) {
 		    obj->verts[i][c] *= Scale[c];
 		    obj->verts[i][c] += Translate[c];
 		}
+		obj->verts[i][0] =  obj->verts[i][0]*cos(Rotate[2]) - obj->verts[i][1]*sin(Rotate[2]);
+		obj->verts[i][1] =  obj->verts[i][0]*sin(Rotate[2]) + obj->verts[i][1]*cos(Rotate[2]);
+		obj->verts[i][0] =  obj->verts[i][0]*cos(Rotate[1]) + obj->verts[i][2]*sin(Rotate[1]);
+                obj->verts[i][2] = -obj->verts[i][0]*sin(Rotate[1]) + obj->verts[i][2]*cos(Rotate[1]);
+		obj->verts[i][1] =  obj->verts[i][1]*cos(Rotate[0]) - obj->verts[i][2]*sin(Rotate[0]);
+                obj->verts[i][2] =  obj->verts[i][1]*sin(Rotate[0]) + obj->verts[i][2]*cos(Rotate[0]);
 	    }
 	}
 }
