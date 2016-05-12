@@ -1116,6 +1116,7 @@ int GetOptions(int argc, char** argv) {
                             break;
 			case ' ':
 			case '\0':
+			default:
 			    InvalidOption(argv[i]);
                     }
                     break;
