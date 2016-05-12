@@ -15,6 +15,8 @@
 #include <string.h>
 #include <math.h>
 
+#define PI M_PI
+
 #define MAX_LINE_LEN (5880)
 #define MAX_FACE_NODES (380)
 
@@ -1102,15 +1104,15 @@ int GetOptions(int argc, char** argv) {
 		    switch (argv[i][2]) {
 			case 'x':
 			    i++;
-			    Rotate[0] = atof(argv[i]);
+			    Rotate[0] = PI*atof(argv[i])/180.;
 			    break;
                         case 'y':
                             i++;
-                            Rotate[1] = atof(argv[i]);
+                            Rotate[1] = PI*atof(argv[i])/180.;
                             break;
                         case 'z':
                             i++;
-                            Rotate[2] = atof(argv[i]);
+                            Rotate[2] = PI*atof(argv[i])/180.;
                             break;
 			case ' ':
 			case '\0':
