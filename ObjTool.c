@@ -7,7 +7,7 @@
  *
  */
 
-#define VERSION 0.13
+#define VERSION 0.13.1
  	
 #include <stdio.h>
 #include <stdlib.h>
