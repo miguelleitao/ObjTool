@@ -588,11 +588,8 @@ printf("shadow done\n");
     }		
     return shadow;
 }
-void LoadObjFile(char *fname, ObjFile *obj) {
-	int nl = 0;
-	int i;
-	int res = GetObjStats( fname, &(obj->stats) );
-	if ( ! res ) return;
+
+void AllocObjFile(ObjFile *obj) {
 	obj->faces = Malloc(obj->stats.faces, sizeof(Face));
 	obj->verts = Malloc(obj->stats.verts, sizeof(Vert));
 	obj->norms = Malloc(obj->stats.norms, sizeof(Norm));
@@ -610,7 +607,16 @@ void LoadObjFile(char *fname, ObjFile *obj) {
 	obj->order.verts = Malloc(obj->stats.verts, sizeof(int));
 	obj->order.texts = Malloc(obj->stats.texts, sizeof(int));
 	obj->order.norms = Malloc(obj->stats.norms, sizeof(int));
+}
 
+void LoadObjFile(char *fname, ObjFile *obj) {
+	int nl = 0;
+	int i;
+	int res = GetObjStats( fname, &(obj->stats) );
+	if ( ! res ) return;
+
+	AllocObjFile(obj);
+	
 //printf("face %ld, Vert %ld  Norm %ld, Text %ld\n", sizeof(Face), sizeof(Vert), sizeof(Norm), sizeof(Text) );
 	ObjStats counters;
 	ResetObjStats(&counters);
@@ -841,6 +847,8 @@ void FreeObjFile(ObjFile *obj) {
 
 
 void SetUseCounters(ObjFile *obj) {
+	// Counts uses of each vertex, norm and texture coord.
+	// results are stored in obj->counts structure
 	int i;
 	for( i=0 ; i<obj->stats.verts ; i++ )
 	    obj->counts.verts[i] = 0;
@@ -914,6 +922,8 @@ void CleanFaces(ObjFile *obj) {
 
 
 void SetIndexs(ObjFile *obj) {
+	// Assign an order number to each used vertex/texture coord/norm
+	// Unused vertex/texture coord/norm will get no order number.
 	int i;
 	int nv=0, nt=0, nn=0;
 	for( i=0 ; i<obj->stats.verts ; i++ ) 
@@ -956,13 +966,35 @@ void ProcVerts(ObjFile *obj) {
 		    obj->verts[i][c] *= Scale[c];
 		    obj->verts[i][c] += Translate[c];
 		}
-		obj->verts[i][0] =  obj->verts[i][0]*cos(Rotate[2]) - obj->verts[i][1]*sin(Rotate[2]);
-		obj->verts[i][1] =  obj->verts[i][0]*sin(Rotate[2]) + obj->verts[i][1]*cos(Rotate[2]);
-		obj->verts[i][0] =  obj->verts[i][0]*cos(Rotate[1]) + obj->verts[i][2]*sin(Rotate[1]);
-                obj->verts[i][2] = -obj->verts[i][0]*sin(Rotate[1]) + obj->verts[i][2]*cos(Rotate[1]);
-		obj->verts[i][1] =  obj->verts[i][1]*cos(Rotate[0]) - obj->verts[i][2]*sin(Rotate[0]);
-                obj->verts[i][2] =  obj->verts[i][1]*sin(Rotate[0]) + obj->verts[i][2]*cos(Rotate[0]);
+		float x,y,z;
+		x = obj->verts[i][0];
+		y = obj->verts[i][1];
+		obj->verts[i][0] =  x*cosf(Rotate[2]) - y*sinf(Rotate[2]);
+		obj->verts[i][1] =  x*sinf(Rotate[2]) + y*cosf(Rotate[2]);
+		x = obj->verts[i][0];
+		z = obj->verts[i][2];
+		obj->verts[i][0] =  x*cosf(Rotate[1]) + z*sinf(Rotate[1]);
+                obj->verts[i][2] = -x*sinf(Rotate[1]) + z*cosf(Rotate[1]);
+		y = obj->verts[i][1];
+		z = obj->verts[i][2];
+		obj->verts[i][1] =  y*cosf(Rotate[0]) - z*sinf(Rotate[0]);
+                obj->verts[i][2] =  y*sinf(Rotate[0]) + z*cosf(Rotate[0]);
 	    }
+	}
+	for( i=0 ; i<obj->stats.norms ; i++ ) {
+		float x,y,z;
+		x = obj->norms[i][0];
+		y = obj->norms[i][1];
+		obj->norms[i][0] =  x*cosf(Rotate[2]) - y*sinf(Rotate[2]);
+		obj->norms[i][1] =  x*sinf(Rotate[2]) + y*cosf(Rotate[2]);
+		x = obj->norms[i][0];
+		z = obj->norms[i][2];
+		obj->norms[i][0] =  x*cosf(Rotate[1]) + z*sinf(Rotate[1]);
+                obj->norms[i][2] = -x*sinf(Rotate[1]) + z*cosf(Rotate[1]);
+		y = obj->norms[i][1];
+		z = obj->norms[i][2];
+		obj->norms[i][1] =  y*cosf(Rotate[0]) - z*sinf(Rotate[0]);
+                obj->norms[i][2] =  y*sinf(Rotate[0]) + z*cosf(Rotate[0]);
 	}
 }
 
@@ -1154,15 +1186,113 @@ int GetOptions(int argc, char** argv) {
 		    InvalidOption(argv[i]);
 	    }
 	}
+	else break;
 	i++;
     }
     return i;
 }
 
+int JoinObjFiles(int nObjs, ObjFile ObjSet[], ObjFile *obj) {
+
+	ResetObjStats( &(obj->stats) );
+
+	int i;
+	for( i=0 ; i<nObjs ; i++ ) {
+		obj->stats.verts += ObjSet[i].stats.verts;
+		obj->stats.faces += ObjSet[i].stats.faces;
+		obj->stats.norms += ObjSet[i].stats.norms;
+		obj->stats.texts += ObjSet[i].stats.texts;
+		obj->stats.paras += ObjSet[i].stats.paras;
+		obj->stats.grps += ObjSet[i].stats.grps;
+		obj->stats.mats += ObjSet[i].stats.mats;
+		obj->stats.objs += ObjSet[i].stats.objs;
+		obj->stats.libs += ObjSet[i].stats.libs;
+		obj->stats.shds += ObjSet[i].stats.shds;
+		int j;
+
+		for( j=0 ; j<3 ; j++ ) {
+		    if ( ObjSet[i].stats.vmin[j] < obj->stats.vmin[j] )
+			obj->stats.vmin[j] = ObjSet[i].stats.vmin[j];
+		    if ( ObjSet[i].stats.vmax[j] > obj->stats.vmax[j] )
+			obj->stats.vmax[j] = ObjSet[i].stats.vmax[j];
+		}
+		for( j=0 ; j<2 ; j++ ) {
+		    if ( ObjSet[i].stats.tmin[j] < obj->stats.tmin[j] )
+			obj->stats.tmin[j] = ObjSet[i].stats.tmin[j];
+		    if ( ObjSet[i].stats.tmax[j] > obj->stats.tmax[j] )
+			obj->stats.tmax[j] = ObjSet[i].stats.tmax[j];
+		}
+		PrintObjStats(&(obj->stats));
+	}
+
+printf("  Total\n");
+PrintObjStats(&(obj->stats));
+
+	AllocObjFile(obj);
+	ObjStats counters;
+        ResetObjStats(&counters);
+
+	for( i=0 ; i<nObjs ; i++ ) {
+		memcpy(obj->verts+counters.verts, ObjSet[i].verts, ObjSet[i].stats.verts*sizeof(Vert));
+		memcpy(obj->norms+counters.norms, ObjSet[i].norms, ObjSet[i].stats.norms*sizeof(Norm));
+		memcpy(obj->texts+counters.texts, ObjSet[i].texts, ObjSet[i].stats.texts*sizeof(Text));
+		int j;
+		for( j=0 ; j<ObjSet[i].stats.faces ; j++ ) {
+			obj->faces[counters.faces+j].nodes = ObjSet[i].faces[j].nodes;
+			obj->faces[counters.faces+j].Node = Malloc(ObjSet[i].faces[j].nodes, sizeof(FaceNode));
+			memcpy(obj->faces[counters.faces+j].Node, ObjSet[i].faces[j].Node, 
+				ObjSet[i].faces[j].nodes*sizeof(FaceNode) );
+			int n;
+			for( n=0 ; n<obj->faces[counters.faces+j].nodes ; n++ ) {
+				obj->faces[counters.faces+j].Node[n][0] += counters.verts;
+				obj->faces[counters.faces+j].Node[n][1] += counters.texts;
+				obj->faces[counters.faces+j].Node[n][2] += counters.norms;
+			}
+		}
+		for( j=0 ; j<ObjSet[i].stats.libs ; j++ ) {
+printf("merging lib\n");
+printf("merging lib %d %d: %s\n", i, j, ObjSet[i].libs[j].name);
+			obj->libs[counters.libs+j].line = ObjSet[i].libs[j].line + counters.faces;
+			obj->libs[counters.libs+j].name = strdup(ObjSet[i].libs[j].name);
+		}
+		for( j=0 ; j<ObjSet[i].stats.objs ; j++ ) {
+			obj->objs[counters.objs+j].line = ObjSet[i].objs[j].line + counters.faces;
+			obj->objs[counters.objs+j].name = strdup(ObjSet[i].objs[j].name);
+		}
+		for( j=0 ; j<ObjSet[i].stats.shds ; j++ ) {
+			obj->shds[counters.shds+j].line = ObjSet[i].shds[j].line + counters.faces;
+			obj->shds[counters.shds+j].name = strdup(ObjSet[i].shds[j].name);
+		}
+		for( j=0 ; j<ObjSet[i].stats.grps ; j++ ) {
+			obj->grps[counters.grps+j].line = ObjSet[i].grps[j].line + counters.faces;
+			obj->grps[counters.grps+j].name = strdup(ObjSet[i].grps[j].name);
+		}
+		for( j=0 ; j<ObjSet[i].stats.mats ; j++ ) {
+printf("merging mat %d %d: %s\n", i, j, ObjSet[i].mats[j].name);
+			obj->mats[counters.mats+j].line = ObjSet[i].mats[j].line + counters.faces;
+			obj->mats[counters.mats+j].name = strdup(ObjSet[i].mats[j].name);
+		}
+
+
+		counters.verts += ObjSet[i].stats.verts;
+		counters.norms += ObjSet[i].stats.norms;
+		counters.texts += ObjSet[i].stats.texts;
+		counters.faces += ObjSet[i].stats.faces;
+		counters.libs += ObjSet[i].stats.libs;
+		counters.objs += ObjSet[i].stats.objs;
+		counters.shds += ObjSet[i].stats.shds;
+		counters.grps += ObjSet[i].stats.grps;
+		counters.mats += ObjSet[i].stats.mats;
+	}
+
+printf("merge done\n");
+	return nObjs;
+}
+
 
 int main(int argc, char **argv) {
 
-printf("Compile date: %s\n", CDATE);
+printf("# ObjTool Compile date: %s\n", CDATE);
 
 	ObjFile obj;
 
@@ -1170,46 +1300,66 @@ printf("Compile date: %s\n", CDATE);
 		Usage();
 		exit(0);
 	}
-	int fi = GetOptions(argc,argv)-1;
-printf("fi = %d, argc=%d\n",fi,argc);
-	if ( fi<argc) {
-		LoadObjFile(argv[fi], &obj);
-		SetUseCounters(&obj);
-		if ( info ) {
+	int fi = GetOptions(argc,argv);
+printf("#fi = %d, argc=%d\n",fi,argc);
+
+	if ( fi>=argc ) {
+	    fprintf(stderr,"Al least one input file must be specified.\n");
+	    Usage();
+	}
+
+
+	// Alloc and load obj files
+	int NObjects = argc-fi;
+	ObjFile *ObjSet;
+	ObjSet = Malloc(NObjects, sizeof(ObjFile));
+
+	int i = 0;
+	while ( fi<argc) {
+		fprintf(stderr,"Loading ObjFile '%s'\n", argv[fi]);
+		LoadObjFile(argv[fi], ObjSet+i);
+		SetUseCounters(ObjSet+i);
+		i++;
+		fi++;
+	}
+	
+	JoinObjFiles(NObjects,ObjSet,&obj);
+	
+
+	
+	SetUseCounters(&obj);
+	if ( info ) {
 		    PrintObjStats(&(obj.stats));
 		    exit(0);
-                }
-		if ( Verbose ) {
+        }
+	if ( Verbose ) {
 		    if ( Verbose>3 )
 			PrintFullObjStats(&obj);
 		    else
 			PrintObjStats(&(obj.stats));
-		}
+	}
 
-		FilterVerts( &obj, VMin, VMax );
+	FilterVerts( &obj, VMin, VMax );
 
-		//SetIndexs(&obj);
-		CleanFaces(&obj);
+	//SetIndexs(&obj);
+	CleanFaces(&obj);
 
-		SetUseCounters(&obj);
-		ProcVerts( &obj );
-		SetIndexs(&obj);
-		SaveObjFile(OutputFile, &obj);
+	SetUseCounters(&obj);
+	ProcVerts( &obj );
+	SetIndexs(&obj);
+	SaveObjFile(OutputFile, &obj);
 printf("shadow\n");
-		if ( ShadowOutputFile ) {
+	if ( ShadowOutputFile ) {
 
 			ObjFile *Shadow = CreateShadowObj(&obj);
 PrintObjStats(&(Shadow->stats));
 			SaveObjFile(ShadowOutputFile, Shadow);
 printf("saved\n");
 			FreeObjFile(Shadow);
-		}
-		FreeObjFile(&obj);
 	}
-	else {
-	    fprintf(stderr,"Al least one input file must be specified.\n");
-	    Usage();
-	}
+	FreeObjFile(&obj);
+
+
 	return 0;
 }
 		
