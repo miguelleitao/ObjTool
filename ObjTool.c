@@ -102,6 +102,7 @@ short int SolidCut = 0;
 short int Relative = 0;
 short int Verbose = 0;
 short int info = 0;
+short int Negate = 0;
 char *SelectGroup[20];
 int Groups = 0;
 
@@ -689,7 +690,7 @@ void LoadObjFile(char *fname, ObjFile *obj) {
 				continue;
 			case 'v':
 				switch ( *(lptr+1) ) {
-					case ' ':
+					case ' ':		// Vertex
 						ReadVec3f(lptr+2,obj->verts[counters.verts]);
 						for( i=0 ; i<3 ; i++ ) {
 						    if ( obj->verts[counters.verts][i]<obj->stats.vmin[i] )
@@ -699,11 +700,11 @@ void LoadObjFile(char *fname, ObjFile *obj) {
 						}
 						counters.verts += 1;
 						break;
-					case 'n':
+					case 'n':		// Normal
 						ReadVec3f(lptr+2,obj->norms[counters.norms]);
 						counters.norms += 1;
 						break;
-					case 't':
+					case 't':		// Texture Vertex
 						ReadVec2f(lptr+2,obj->texts[counters.texts]);
 						for( i=0 ; i<2 ; i++ ) {
 						    if ( obj->texts[counters.texts][i]<obj->stats.tmin[i] )
@@ -900,13 +901,23 @@ void CleanFaces(ObjFile *obj) {
 	int i, n;
 	int midx = 0;
 	for( i=0 ; i<obj->stats.faces ; i++ ) {
+	    // Remove face if material matches/does not match selected Material
 	    if ( Material!=NULL ) {
 		while ( midx<obj->stats.mats && i==obj->mats[midx].line )     midx++;
-		if ( ! midx || strncmp(Material,obj->mats[midx-1].name,strlen(Material))!=0 ) {
-		    obj->faces[i].nodes = 0;
-		    continue;
+		if ( Negate ) {
+			if ( ! midx || strncmp(Material,obj->mats[midx-1].name,strlen(Material))==0 ) {
+			    obj->faces[i].nodes = 0;
+			    continue;
+			}
+		}
+		else {
+			if ( ! midx || strncmp(Material,obj->mats[midx-1].name,strlen(Material))!=0 ) {
+			    obj->faces[i].nodes = 0;
+			    continue;
+			}
 		}
 	    }
+	    // Remove face if it includes inexistent vertexs
 	    for( n=0 ; n<obj->faces[i].nodes ; n++ ) {
 		int v = obj->faces[i].Node[n][0];
 		if ( v<1 || v>obj->stats.verts  || obj->counts.verts[v-1]<0 ) {
@@ -1023,6 +1034,7 @@ void Usage() {
 
     fprintf(stderr,"\t\t-R                 use relative coords\n");
     fprintf(stderr,"\t\t-c                 solid cut\n");
+    fprintf(stderr,"\t\t-n		   negate filter condition\n");
     fprintf(stderr,"\t\t-o outfile         output to outfile (default: stdout)\n");
     fprintf(stderr,"\t\t-S shadow_file     shadow output to shadow_file (default: no shadow ouput)\n");
     
@@ -1181,6 +1193,10 @@ int GetOptions(int argc, char** argv) {
 		case 'g':
 		    i++;
 		    SelectGroup[Groups++] = argv[i];
+		    break;
+		case 'n':
+		    Negate = 1;
+		    break;
 		default:
 		    InvalidOption(argv[i]);
 	    }
