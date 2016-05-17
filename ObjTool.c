@@ -8,6 +8,7 @@
  */
 
 #define VERSION 0.13.1
+#define _GNU_SOURCE
  	
 #include <stdio.h>
 #include <stdlib.h>
@@ -106,7 +107,8 @@ short int Negate = 0;
 char *SelectGroup[20];
 int Groups = 0;
 
-
+#define SinF(x) ( sinf(x) )
+#define CosF(x) ( cosf(x) )
 
 void *Malloc(int n, size_t dim) {
 	long size = n*dim;
@@ -979,32 +981,32 @@ void ProcVerts(ObjFile *obj) {
 		float x,y,z;
 		x = obj->verts[i][0];
 		y = obj->verts[i][1];
-		obj->verts[i][0] =  x*cosf(Rotate[2]) - y*sinf(Rotate[2]);
-		obj->verts[i][1] =  x*sinf(Rotate[2]) + y*cosf(Rotate[2]);
+		obj->verts[i][0] =  x*CosF(Rotate[2]) - y*SinF(Rotate[2]);
+		obj->verts[i][1] =  x*SinF(Rotate[2]) + y*CosF(Rotate[2]);
 		x = obj->verts[i][0];
 		z = obj->verts[i][2];
-		obj->verts[i][0] =  x*cosf(Rotate[1]) + z*sinf(Rotate[1]);
-                obj->verts[i][2] = -x*sinf(Rotate[1]) + z*cosf(Rotate[1]);
+		obj->verts[i][0] =  x*CosF(Rotate[1]) + z*SinF(Rotate[1]);
+                obj->verts[i][2] = -x*SinF(Rotate[1]) + z*CosF(Rotate[1]);
 		y = obj->verts[i][1];
 		z = obj->verts[i][2];
-		obj->verts[i][1] =  y*cosf(Rotate[0]) - z*sinf(Rotate[0]);
-                obj->verts[i][2] =  y*sinf(Rotate[0]) + z*cosf(Rotate[0]);
+		obj->verts[i][1] =  y*CosF(Rotate[0]) - z*SinF(Rotate[0]);
+                obj->verts[i][2] =  y*SinF(Rotate[0]) + z*CosF(Rotate[0]);
 	    }
 	}
 	for( i=0 ; i<obj->stats.norms ; i++ ) {
 		float x,y,z;
 		x = obj->norms[i][0];
 		y = obj->norms[i][1];
-		obj->norms[i][0] =  x*cosf(Rotate[2]) - y*sinf(Rotate[2]);
-		obj->norms[i][1] =  x*sinf(Rotate[2]) + y*cosf(Rotate[2]);
+		obj->norms[i][0] =  x*CosF(Rotate[2]) - y*SinF(Rotate[2]);
+		obj->norms[i][1] =  x*SinF(Rotate[2]) + y*CosF(Rotate[2]);
 		x = obj->norms[i][0];
 		z = obj->norms[i][2];
-		obj->norms[i][0] =  x*cosf(Rotate[1]) + z*sinf(Rotate[1]);
-                obj->norms[i][2] = -x*sinf(Rotate[1]) + z*cosf(Rotate[1]);
+		obj->norms[i][0] =  x*CosF(Rotate[1]) + z*SinF(Rotate[1]);
+                obj->norms[i][2] = -x*SinF(Rotate[1]) + z*CosF(Rotate[1]);
 		y = obj->norms[i][1];
 		z = obj->norms[i][2];
-		obj->norms[i][1] =  y*cosf(Rotate[0]) - z*sinf(Rotate[0]);
-                obj->norms[i][2] =  y*sinf(Rotate[0]) + z*cosf(Rotate[0]);
+		obj->norms[i][1] =  y*CosF(Rotate[0]) - z*SinF(Rotate[0]);
+                obj->norms[i][2] =  y*SinF(Rotate[0]) + z*CosF(Rotate[0]);
 	}
 }
 
