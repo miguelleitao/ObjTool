@@ -1036,7 +1036,7 @@ void Usage() {
 
     fprintf(stderr,"\t\t-R                 use relative coords\n");
     fprintf(stderr,"\t\t-c                 solid cut\n");
-    fprintf(stderr,"\t\t-n		   negate filter condition\n");
+    fprintf(stderr,"\t\t-n		   negate face filter condition( -g,-m )\n");
     fprintf(stderr,"\t\t-o outfile         output to outfile (default: stdout)\n");
     fprintf(stderr,"\t\t-S shadow_file     shadow output to shadow_file (default: no shadow ouput)\n");
     
