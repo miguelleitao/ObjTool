@@ -3,8 +3,6 @@
  *
  *	Command line toolset to work with Wavefront 3D Obj files.
  *
- *	Copyright (C) 2014, Paulo Neto, pneto@magnocomp.com
- *
  */
 
 #define VERSION 0.13.1
@@ -1035,6 +1033,7 @@ void Usage() {
 
 
     fprintf(stderr,"\t\t-R                 use relative coords\n");
+    fprintf(stderr,"\t\t-M		   Do not output mtllib directives\n");
     fprintf(stderr,"\t\t-c                 solid cut\n");
     fprintf(stderr,"\t\t-n		   negate face filter condition( -g,-m )\n");
     fprintf(stderr,"\t\t-o outfile         output to outfile (default: stdout)\n");
@@ -1309,16 +1308,14 @@ printf("merge done\n");
 
 int main(int argc, char **argv) {
 
-printf("# ObjTool Compile date: %s\n", CDATE);
-
-	ObjFile obj;
+	fprintf(stderr,"# ObjTool Compile date: %s\n", CDATE);
 
 	if ( argc<=1 ) {
 		Usage();
 		exit(0);
 	}
 	int fi = GetOptions(argc,argv);
-printf("#fi = %d, argc=%d\n",fi,argc);
+	//printf("# fi = %d, argc=%d\n",fi,argc);
 
 	if ( fi>=argc ) {
 	    fprintf(stderr,"Al least one input file must be specified.\n");
@@ -1339,10 +1336,11 @@ printf("#fi = %d, argc=%d\n",fi,argc);
 		i++;
 		fi++;
 	}
-	
-	JoinObjFiles(NObjects,ObjSet,&obj);
-	
 
+	// All files got
+	// Join all geometrie into one objfile	
+	ObjFile obj;	
+	JoinObjFiles(NObjects,ObjSet,&obj);
 	
 	SetUseCounters(&obj);
 	if ( info ) {
