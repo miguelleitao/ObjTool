@@ -130,6 +130,19 @@ void Free(void *p) {
 //else printf("##Memory not freed\n");
 }
 
+char *StrDup(char *strin) {
+	char *strout = strdup(strin);
+	char *strptr = strout;
+	while( *strptr ) {
+		if ( *strptr=='\n' ) break;
+		if ( *strptr=='\r' ) break;
+		if ( *strptr=='\t' ) break;
+		strptr++;
+	}
+	*strptr = 0;
+	return strout;
+}
+
 int ReadVec2f(char *str, float *data) {
 	int res;
 	res = sscanf(str,"%f %f", data+0, data+1);
@@ -663,28 +676,28 @@ void LoadObjFile(char *fname, ObjFile *obj) {
 				memcpy(obj->faces[counters.faces].Node,tmp_face_nodes,fv*sizeof(FaceNode));
 				counters.faces += 1;
 				continue;
-			case 'm':
-				obj->libs[counters.libs].name = strdup(lptr+7);
+			case 'm':		// mtllib
+				obj->libs[counters.libs].name = StrDup(lptr+7);
 				obj->libs[counters.libs].line = counters.faces;
 				counters.libs += 1;
 				continue;
 			case 'o':
-				obj->objs[counters.objs].name = strdup(lptr+2);
+				obj->objs[counters.objs].name = StrDup(lptr+2);
 				obj->objs[counters.objs].line = counters.faces;
 				counters.objs += 1;
 				continue;
 			case 's':
-				obj->shds[counters.shds].name = strdup(lptr+2);
+				obj->shds[counters.shds].name = StrDup(lptr+2);
 				obj->shds[counters.shds].line = counters.faces;
 				counters.shds += 1;
 				continue;
 			case 'g':
-				obj->grps[counters.grps].name = strdup(lptr+2);
+				obj->grps[counters.grps].name = StrDup(lptr+2);
 				obj->grps[counters.grps].line = counters.faces;
 				counters.grps += 1;
 				continue;
-			case 'u':	// usemtl
-				obj->mats[counters.mats].name = strdup(lptr+7);
+			case 'u':		// usemtl
+				obj->mats[counters.mats].name = StrDup(lptr+7);
 				obj->mats[counters.mats].line = counters.faces;
 				counters.mats += 1;
 				continue;
@@ -769,30 +782,38 @@ void SaveObjFile(char *fname, ObjFile *obj) {
 	//printf("    gravou norms\n");
 	int gidx=0,oidx=0,midx=0,lidx=0;
 	for( i=0 ; i<obj->stats.faces ; i++ ) {
-	    int n;
+	    int n, ci;
 
 	    while ( lidx<obj->stats.libs && i==obj->libs[lidx].line ) {
 		    fprintf(fout,"mtllib %s\n",obj->libs[lidx].name);
 		    lidx++;
 	    }
 	    while ( oidx<obj->stats.objs && i==obj->objs[oidx].line ) {
-		if ( oidx==obj->stats.objs-1 || obj->objs[oidx].line!=obj->objs[oidx+1].line )
-		    fprintf(fout,"o %s\n",obj->objs[oidx].name);
+		for( ci=obj->objs[oidx].line ; oidx<obj->stats.objs-1 && ci<obj->objs[oidx+1].line ; ci++ ) 
+		    if ( obj->faces[ci].nodes > 0 ) {
+			fprintf(fout,"o %s\n",obj->objs[oidx].name);
+			break;
+		    }
 		oidx++;
 	    }
 	    while ( gidx<obj->stats.grps && i==obj->grps[gidx].line ) {
-		if ( gidx==obj->stats.grps-1 || obj->grps[gidx].line!=obj->grps[gidx+1].line )
-		    fprintf(fout,"g %s\n",obj->grps[gidx].name);
+		for( ci=obj->grps[gidx].line ; gidx<obj->stats.grps-1 && ci<obj->grps[gidx+1].line ; ci++ )
+		    if ( obj->faces[ci].nodes > 0 ) {
+		    	fprintf(fout,"g %s\n",obj->grps[gidx].name);
+			break;
+		    }
 		gidx++;
 	    }
 	    while ( midx<obj->stats.mats && i==obj->mats[midx].line ) {
-		if ( midx==obj->stats.mats-1 || obj->mats[midx].line!=obj->mats[midx+1].line )
-		    fprintf(fout,"usemtl %s\n",obj->mats[midx].name);
+		for( ci=obj->mats[midx].line ; midx<obj->stats.mats-1 && ci<obj->mats[midx+1].line ; ci++ ) 
+		    if ( obj->faces[ci].nodes > 0 ) {
+			fprintf(fout,"usemtl %s\n",obj->mats[midx].name);
+			break;
+		    }
 		midx++;
 	    }
 
-
-	    if ( obj->faces[i].nodes <= 0 ) continue;
+	    if ( obj->faces[i].nodes <= 0 ) continue;  // face erased
 	    fprintf(fout,"f "); 
 	    for( n=0 ; n<obj->faces[i].nodes ; n++ ) {
 		fprintf(fout,"%d", VertIndex(obj,obj->faces[i].Node[n][0],nv) );
@@ -905,13 +926,13 @@ void CleanFaces(ObjFile *obj) {
 	    if ( Material!=NULL ) {
 		while ( midx<obj->stats.mats && i==obj->mats[midx].line )     midx++;
 		if ( Negate ) {
-			if ( ! midx || strncmp(Material,obj->mats[midx-1].name,strlen(Material))==0 ) {
+			if ( ! midx || strcmp(Material,obj->mats[midx-1].name)==0 ) {
 			    obj->faces[i].nodes = 0;
 			    continue;
 			}
 		}
 		else {
-			if ( ! midx || strncmp(Material,obj->mats[midx-1].name,strlen(Material))!=0 ) {
+			if ( ! midx || strcmp(Material,obj->mats[midx-1].name)!=0 ) {
 			    obj->faces[i].nodes = 0;
 			    continue;
 			}
@@ -1266,8 +1287,8 @@ PrintObjStats(&(obj->stats));
 			}
 		}
 		for( j=0 ; j<ObjSet[i].stats.libs ; j++ ) {
-printf("merging lib\n");
-printf("merging lib %d %d: %s\n", i, j, ObjSet[i].libs[j].name);
+//printf("merging lib\n");
+//printf("merging lib %d %d: %s\n", i, j, ObjSet[i].libs[j].name);
 			obj->libs[counters.libs+j].line = ObjSet[i].libs[j].line + counters.faces;
 			obj->libs[counters.libs+j].name = strdup(ObjSet[i].libs[j].name);
 		}
@@ -1284,7 +1305,7 @@ printf("merging lib %d %d: %s\n", i, j, ObjSet[i].libs[j].name);
 			obj->grps[counters.grps+j].name = strdup(ObjSet[i].grps[j].name);
 		}
 		for( j=0 ; j<ObjSet[i].stats.mats ; j++ ) {
-printf("merging mat %d %d: %s\n", i, j, ObjSet[i].mats[j].name);
+//printf("merging mat %d %d: %s\n", i, j, ObjSet[i].mats[j].name);
 			obj->mats[counters.mats+j].line = ObjSet[i].mats[j].line + counters.faces;
 			obj->mats[counters.mats+j].name = strdup(ObjSet[i].mats[j].name);
 		}
@@ -1363,9 +1384,9 @@ int main(int argc, char **argv) {
 	ProcVerts( &obj );
 	SetIndexs(&obj);
 	SaveObjFile(OutputFile, &obj);
-printf("shadow\n");
-	if ( ShadowOutputFile ) {
 
+	if ( ShadowOutputFile ) {
+printf("shadow\n");
 			ObjFile *Shadow = CreateShadowObj(&obj);
 PrintObjStats(&(Shadow->stats));
 			SaveObjFile(ShadowOutputFile, Shadow);
