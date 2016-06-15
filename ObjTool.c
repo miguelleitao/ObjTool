@@ -102,8 +102,11 @@ short int Relative = 0;
 short int Verbose = 0;
 short int info = 0;
 short int Negate = 0;
+short int Explode = 0;
 char *SelectGroup[20];
-int Groups = 0;
+char *SelectObject[20];
+int SelGroups = 0;
+int SelObjects = 0;;
 
 #define SinF(x) ( sinf(x) )
 #define CosF(x) ( cosf(x) )
@@ -833,6 +836,94 @@ void SaveObjFile(char *fname, ObjFile *obj) {
 	if ( fout!=stdout ) fclose(fout); 
 }
 
+
+void ExplodeOutputFile(char *OutputFile, ObjFile *obj) {
+
+// initial version. copy from save_objFile
+	FILE *fout;
+	int i;
+	int nv=0, nt=0, nn=0;
+	if ( fname && *fname ) {
+		printf("vai abrir ficheiro %s\n",fname);
+		fout = fopen(fname,"w");
+		if ( ! fout ) {
+		    fprintf(stderr,"Cannot open output file '%s'\n", fname);
+		    exit(5);
+		}
+	        //printf("    abriu\n");
+	}
+	for( i=0 ; i<obj->stats.verts ; i++ ) 
+	    if ( obj->counts.verts[i] > 0 ) {
+		fprintf(fout,"v %f %f %f\n", obj->verts[i][0],obj->verts[i][1],obj->verts[i][2]);
+		nv++;
+	    }
+	//printf("    gravou verts\n");
+	for( i=0 ; i<obj->stats.texts ; i++ ) 
+	    if ( obj->counts.texts[i] > 0 ) {
+		fprintf(fout,"vt %f %f %f\n", obj->texts[i][0],obj->texts[i][1],obj->texts[i][2]);
+		nt++;
+	    }
+
+	//printf("    gravou text verts\n");
+	for( i=0 ; i<obj->stats.norms ; i++ ) 
+	    if ( obj->counts.norms[i] > 0 ) {
+		fprintf(fout,"vn %f %f %f\n", obj->norms[i][0],obj->norms[i][1],obj->norms[i][2]);
+		nn++;
+	    }
+	//printf("    gravou norms\n");
+	int gidx=0,oidx=0,midx=0,lidx=0;
+	for( i=0 ; i<obj->stats.faces ; i++ ) {
+	    int n, ci;
+
+	    while ( lidx<obj->stats.libs && i==obj->libs[lidx].line ) {
+		    fprintf(fout,"mtllib %s\n",obj->libs[lidx].name);
+		    lidx++;
+	    }
+	    while ( oidx<obj->stats.objs && i==obj->objs[oidx].line ) {
+		for( ci=obj->objs[oidx].line ; oidx<obj->stats.objs-1 && ci<obj->objs[oidx+1].line ; ci++ ) 
+		    if ( obj->faces[ci].nodes > 0 ) {
+			fprintf(fout,"o %s\n",obj->objs[oidx].name);
+			break;
+		    }
+		oidx++;
+	    }
+	    while ( gidx<obj->stats.grps && i==obj->grps[gidx].line ) {
+		for( ci=obj->grps[gidx].line ; gidx<obj->stats.grps-1 && ci<obj->grps[gidx+1].line ; ci++ )
+		    if ( obj->faces[ci].nodes > 0 ) {
+		    	fprintf(fout,"g %s\n",obj->grps[gidx].name);
+			break;
+		    }
+		gidx++;
+	    }
+	    while ( midx<obj->stats.mats && i==obj->mats[midx].line ) {
+		for( ci=obj->mats[midx].line ; midx<obj->stats.mats-1 && ci<obj->mats[midx+1].line ; ci++ ) 
+		    if ( obj->faces[ci].nodes > 0 ) {
+			fprintf(fout,"usemtl %s\n",obj->mats[midx].name);
+			break;
+		    }
+		midx++;
+	    }
+
+	    if ( obj->faces[i].nodes <= 0 ) continue;  // face erased
+	    fprintf(fout,"f "); 
+	    for( n=0 ; n<obj->faces[i].nodes ; n++ ) {
+		fprintf(fout,"%d", VertIndex(obj,obj->faces[i].Node[n][0],nv) );
+		fprintf(fout,"/");
+		
+		if ( obj->faces[i].Node[n][1]!=NULL_IDX )
+			fprintf(fout,"%d", TextIndex(obj,obj->faces[i].Node[n][1],nt) );
+		fprintf(fout,"/");
+
+		if ( obj->faces[i].Node[n][2]!=NULL_IDX )
+			fprintf(fout,"%d", NormIndex(obj,obj->faces[i].Node[n][2],nn) );
+
+		fprintf(fout," ");
+	    }
+	    fprintf(fout,"\n");
+	}
+	if ( fout!=stdout ) fclose(fout); 
+}
+
 void FreeObjFile(ObjFile *obj) {
     int i;
     for( i=0 ; i<obj->stats.faces ; i++ )
@@ -920,7 +1011,7 @@ void SetUseCounters(ObjFile *obj) {
 
 void CleanFaces(ObjFile *obj) {
 	int i, n;
-	int midx = 0;
+	int midx = 0, oidx = 0, gidx = 0;
 	for( i=0 ; i<obj->stats.faces ; i++ ) {
 	    // Remove face if material matches/does not match selected Material
 	    if ( Material!=NULL ) {
@@ -933,6 +1024,23 @@ void CleanFaces(ObjFile *obj) {
 		}
 		else {
 			if ( ! midx || strcmp(Material,obj->mats[midx-1].name)!=0 ) {
+			    obj->faces[i].nodes = 0;
+			    continue;
+			}
+		}
+	    }
+	    if ( SelObjects>0 ) {
+	        // Remove face if object matches/does not match selected Object
+		while ( oidx<obj->stats.objs && i==obj->objs[oidx].line )     oidx++;
+		// Test is limited to 1 object ( SelObjects[0] )
+		if ( Negate ) {
+			if ( ! oidx || strcmp(SelectObject[0],obj->objs[oidx-1].name)==0 ) {
+			    obj->faces[i].nodes = 0;
+			    continue;
+			}
+		}
+		else {
+			if ( ! oidx || strcmp(SelectObject[0],obj->objs[oidx-1].name)!=0 ) {
 			    obj->faces[i].nodes = 0;
 			    continue;
 			}
@@ -1039,6 +1147,7 @@ void Usage() {
     fprintf(stderr,"\t\t-ymax value        define ymax\n");
     fprintf(stderr,"\t\t-zmin value        define zmin\n");
     fprintf(stderr,"\t\t-zmax value        define zmax\n");
+    fprintf(stderr,"\t\t-o name            select object\n");
     fprintf(stderr,"\t\t-g name 	   select obj group\n");
     fprintf(stderr,"\t\t-m name	           select material\n");
     fprintf(stderr,"\t\t-tx value	   translate x\n");
@@ -1057,7 +1166,7 @@ void Usage() {
     fprintf(stderr,"\t\t-M		   Do not output mtllib directives\n");
     fprintf(stderr,"\t\t-c                 solid cut\n");
     fprintf(stderr,"\t\t-n		   negate face filter condition( -g,-m )\n");
-    fprintf(stderr,"\t\t-o outfile         output to outfile (default: stdout)\n");
+    fprintf(stderr,"\t\t-O outfile         output to outfile (default: stdout)\n");
     fprintf(stderr,"\t\t-S shadow_file     shadow output to shadow_file (default: no shadow ouput)\n");
     
 }
@@ -1189,13 +1298,15 @@ int GetOptions(int argc, char** argv) {
 		    i++;
 		    Material = argv[i];
 		    break;
-/*
 		case 'g':
 		    i++;
-		    Group = argv[i];
+		    SelectGroup[SelGroups++] = argv[i];
 		    break;
-*/
 		case 'o':
+		    i++;
+		    SelectObject[SelObjects++] = argv[i];
+		    break;
+		case 'O':
 		    i++;
 		    OutputFile = argv[i];
 		    break;
@@ -1211,10 +1322,6 @@ int GetOptions(int argc, char** argv) {
 		    break;
 		case 'v':
 		    Verbose += 1;
-		    break;
-		case 'g':
-		    i++;
-		    SelectGroup[Groups++] = argv[i];
 		    break;
 		case 'n':
 		    Negate = 1;
@@ -1383,7 +1490,10 @@ int main(int argc, char **argv) {
 	SetUseCounters(&obj);
 	ProcVerts( &obj );
 	SetIndexs(&obj);
-	SaveObjFile(OutputFile, &obj);
+	if ( Explode )
+		ExplodeOutputFile(OutputFile, &obj);
+	else
+		SaveObjFile(OutputFile, &obj);
 
 	if ( ShadowOutputFile ) {
 printf("shadow\n");
