@@ -843,7 +843,12 @@ void ExplodeOutputFile(char *OutputFile, ObjFile *obj) {
 	FILE *fout;
 	int i;
 	int nv=0, nt=0, nn=0;
-	if ( fname && *fname ) {
+	#define MAX_FILE_NAME_LEN (480)
+	char fname[MAX_FILE_NAME_LEN];
+
+	strcpy(fname,OutputFile);   // dev version
+
+	if ( *fname ) {
 		printf("vai abrir ficheiro %s\n",fname);
 		fout = fopen(fname,"w");
 		if ( ! fout ) {
@@ -921,7 +926,7 @@ void ExplodeOutputFile(char *OutputFile, ObjFile *obj) {
 	    }
 	    fprintf(fout,"\n");
 	}
-	if ( fout!=stdout ) fclose(fout); 
+	fclose(fout); 
 }
 
 void FreeObjFile(ObjFile *obj) {
@@ -1011,13 +1016,15 @@ void SetUseCounters(ObjFile *obj) {
 
 void CleanFaces(ObjFile *obj) {
 	int i, n;
-	int midx = 0, oidx = 0, gidx = 0;
+	int midx = 0, oidx = 0, gidx = 0;	// current indexes.
+						// 0(zero) means material/object/group not yet defined
+						// Faces without defined material/object/group always fail the test. 
 	for( i=0 ; i<obj->stats.faces ; i++ ) {
 	    // Remove face if material matches/does not match selected Material
 	    if ( Material!=NULL ) {
 		while ( midx<obj->stats.mats && i==obj->mats[midx].line )     midx++;
 		if ( Negate ) {
-			if ( ! midx || strcmp(Material,obj->mats[midx-1].name)==0 ) {
+			if ( midx && strcmp(Material,obj->mats[midx-1].name)==0 ) {
 			    obj->faces[i].nodes = 0;
 			    continue;
 			}
@@ -1034,13 +1041,30 @@ void CleanFaces(ObjFile *obj) {
 		while ( oidx<obj->stats.objs && i==obj->objs[oidx].line )     oidx++;
 		// Test is limited to 1 object ( SelObjects[0] )
 		if ( Negate ) {
-			if ( ! oidx || strcmp(SelectObject[0],obj->objs[oidx-1].name)==0 ) {
+			if ( oidx && strcmp(SelectObject[0],obj->objs[oidx-1].name)==0 ) {
 			    obj->faces[i].nodes = 0;
 			    continue;
 			}
 		}
 		else {
 			if ( ! oidx || strcmp(SelectObject[0],obj->objs[oidx-1].name)!=0 ) {
+			    obj->faces[i].nodes = 0;
+			    continue;
+			}
+		}
+	    }
+	    if ( SelGroups>0 ) {
+	        // Remove face if group matches/does not match selected Object
+		while ( gidx<obj->stats.grps && i==obj->grps[gidx].line )     gidx++;
+		// Test is limited to 1 object ( SelObjects[0] )
+		if ( Negate ) {
+			if ( gidx && strcmp(SelectGroup[0],obj->grps[gidx-1].name)==0 ) {
+			    obj->faces[i].nodes = 0;
+			    continue;
+			}
+		}
+		else {
+			if ( ! gidx || strcmp(SelectGroup[0],obj->grps[gidx-1].name)!=0 ) {
 			    obj->faces[i].nodes = 0;
 			    continue;
 			}
