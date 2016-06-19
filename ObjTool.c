@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <assert.h>
 
 #define PI M_PI
 
@@ -558,10 +559,6 @@ printf("mmax: %f\n",mmax);
 	shadow->verts[si][1] = yp;
 	shadow->stats.verts = si+1;
     }
-
-	
-
-
    
    // smachdown zz coords to zmin
    for( i=0 ; i<shadow->stats.verts ; i++ )
@@ -606,6 +603,7 @@ printf("shadow done\n");
 }
 
 void AllocObjFile(ObjFile *obj) {
+	assert(obj!=NULL);
 	obj->faces = Malloc(obj->stats.faces, sizeof(Face));
 	obj->verts = Malloc(obj->stats.verts, sizeof(Vert));
 	obj->norms = Malloc(obj->stats.norms, sizeof(Norm));
@@ -845,6 +843,20 @@ void ExplodeOutputFile(char *OutputFile, ObjFile *obj) {
 	int nv=0, nt=0, nn=0;
 	#define MAX_FILE_NAME_LEN (480)
 	char fname[MAX_FILE_NAME_LEN];
+	unsigned int fnum = 0;
+	int fidx = 0;
+
+	do {
+	    ObjFile *obj_part;
+	    obj_part = Malloc(1,sizeof(ObjFile));
+
+	    JoinObjFiles(1,obj,obj_part);
+	
+	    SetUseCounters(obj_part);
+	    
+	    Free(obj_part);
+	
+	} while ( 1 );	
 
 	strcpy(fname,OutputFile);   // dev version
 
@@ -1039,7 +1051,7 @@ void CleanFaces(ObjFile *obj) {
 	    if ( SelObjects>0 ) {
 	        // Remove face if object matches/does not match selected Object
 		while ( oidx<obj->stats.objs && i==obj->objs[oidx].line )     oidx++;
-		// Test is limited to 1 object ( SelObjects[0] )
+		// Current Test implementation is limited to 1 object ( SelectObject[0] )
 		if ( Negate ) {
 			if ( oidx && strcmp(SelectObject[0],obj->objs[oidx-1].name)==0 ) {
 			    obj->faces[i].nodes = 0;
@@ -1054,9 +1066,9 @@ void CleanFaces(ObjFile *obj) {
 		}
 	    }
 	    if ( SelGroups>0 ) {
-	        // Remove face if group matches/does not match selected Object
+	        // Remove face if group matches/does not match selected Group
 		while ( gidx<obj->stats.grps && i==obj->grps[gidx].line )     gidx++;
-		// Test is limited to 1 object ( SelObjects[0] )
+		// Current Test implementation is limited to 1 group ( SelectGroup[0] )
 		if ( Negate ) {
 			if ( gidx && strcmp(SelectGroup[0],obj->grps[gidx-1].name)==0 ) {
 			    obj->faces[i].nodes = 0;
@@ -1490,7 +1502,7 @@ int main(int argc, char **argv) {
 	}
 
 	// All files got
-	// Join all geometrie into one objfile	
+	// Join all geometry into one objfile	
 	ObjFile obj;	
 	JoinObjFiles(NObjects,ObjSet,&obj);
 	
