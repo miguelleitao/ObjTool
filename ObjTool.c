@@ -5,7 +5,7 @@
  *
  */
 
-#define VERSION 0.13.1
+#define VERSION 0.13.2
 #define _GNU_SOURCE
  	
 #include <stdio.h>
@@ -23,6 +23,7 @@
 
 #define NULL_IDX (-999999)
 
+#define MEM_META_INFO_SIZE (16)
 #define MEM_TAG (0x7a76b532)
 
 typedef struct ObjStatsStruct {
@@ -118,21 +119,22 @@ void SetIndexs(ObjFile *obj);
 
 void *Malloc(int n, size_t dim) {
 	long size = n*dim;
-	void *buf = malloc(size+8);
+	void *buf = malloc(size+MEM_META_INFO_SIZE);
 	if ( ! buf ) {
 		fprintf(stderr,"Cannot alloc memory\n");
 		exit(3);
 	}
 	*((long *)buf) = MEM_TAG;
-	memset(buf+8,0,size);
-	return buf+8;
+	*((long *)(buf+8)) = (long)(size+MEM_META_INFO_SIZE);
+	memset(buf+MEM_META_INFO_SIZE,0,size);
+	return buf+MEM_META_INFO_SIZE;
 }
 
 void Free(void *p) {
-	long *tag_p = p-8;
+	long *tag_p = p-MEM_META_INFO_SIZE;
 	if ( *tag_p == MEM_TAG ) {
 		*tag_p = 0L;
-		free(p-8);
+		free(p-MEM_META_INFO_SIZE);
 //printf("Memory freed\n");
 	}
 //else printf("##Memory not freed\n");
@@ -244,7 +246,6 @@ void PrintFullObjStats(ObjFile *obj) {
 }
 
 int GetObjStats(char *fname, ObjStats *os) {
-
 	int nl = 0;
 	int i;
 	float vtx[3];
