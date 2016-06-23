@@ -136,7 +136,6 @@ void Free(void *p) {
 		*tag_p = 0L;
 		free(p-MEM_META_INFO_SIZE);
 //printf("Memory freed\n");
-	}
 //else printf("##Memory not freed\n");
 }
 
