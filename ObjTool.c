@@ -112,6 +112,10 @@ int SelObjects = 0;;
 #define SinF(x) ( sinf(x) )
 #define CosF(x) ( cosf(x) )
 
+
+int JoinObjFiles(int nObjs, ObjFile ObjSet[], ObjFile *obj);
+void SetUseCounters(ObjFile *obj);
+
 void *Malloc(int n, size_t dim) {
 	long size = n*dim;
 	void *buf = malloc(size+8);
