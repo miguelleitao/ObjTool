@@ -135,6 +135,7 @@ void Free(void *p) {
 	if ( *tag_p == MEM_TAG ) {
 		*tag_p = 0L;
 		free(p-MEM_META_INFO_SIZE);
+	}
 //printf("Memory freed\n");
 //else printf("##Memory not freed\n");
 }
@@ -860,6 +861,7 @@ void ExplodeOutputFile(char *OutputFile, ObjFile *obj) {
 	unsigned int fnum = 0;
 
 	do {
+printf("    Adding face %d\n", iface);
 	    ObjFile *obj_part;
 	    obj_part = Malloc(1,sizeof(ObjFile));
 
@@ -892,7 +894,7 @@ void ExplodeOutputFile(char *OutputFile, ObjFile *obj) {
 	    SetIndexs( obj_part );
 
 	    snprintf(fname,MAX_FILE_NAME_LEN,"%s_%u_%d_%d_%d.obj", OutputFile, fnum, imat, iobj, igrp);
-	    
+printf("  Saving PartFile '%s'\n",fname); 	    
 	    SaveObjFile(fname, obj_part );
 
 	    Free(obj_part);
@@ -1169,6 +1171,7 @@ void Usage() {
     fprintf(stderr,"\t\t-c                 solid cut\n");
     fprintf(stderr,"\t\t-n		   negate face filter condition( -g,-m )\n");
     fprintf(stderr,"\t\t-O outfile         output to outfile (default: stdout)\n");
+    fprintf(stderr,"\t\t-e		   Explode outfile into single objects\n");
     fprintf(stderr,"\t\t-S shadow_file     shadow output to shadow_file (default: no shadow ouput)\n");
     
 }
