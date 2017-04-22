@@ -3,6 +3,8 @@
  *
  *	Command line toolset to work with Wavefront 3D Obj files.
  *
+ *	Uses OBJ file format as defined in http://paulbourke.net/dataformats/obj/
+ * 	Not all OBJ file format specs are implemented.
  */
 
 #define VERSION 0.13.2
