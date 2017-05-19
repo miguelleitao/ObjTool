@@ -478,7 +478,7 @@ ObjFile *CreateShadowObj_v1(ObjFile *obj) {
 }
 
 ObjFile *CreateShadowObj(ObjFile *obj) {
-printf("Creating shadow\n");
+fprintf(stderr,"Creating shadow\n");
   // nova versao por convex hull
   //  printf("Creating shadow\n");
     int i, si;	// face indexs
@@ -761,7 +761,7 @@ void SaveObjFile(char *fname, ObjFile *obj) {
 	int i;
 	int nv=0, nt=0, nn=0;
 	if ( fname && *fname ) {
-		printf("vai abrir ficheiro %s\n",fname);
+		//printf("vai abrir ficheiro %s\n",fname);
 		fout = fopen(fname,"w");
 		if ( ! fout ) {
 		    fprintf(stderr,"Cannot open output file '%s'\n", fname);
@@ -1376,11 +1376,11 @@ int JoinObjFiles(int nObjs, ObjFile ObjSet[], ObjFile *obj) {
 		    if ( ObjSet[i].stats.tmax[j] > obj->stats.tmax[j] )
 			obj->stats.tmax[j] = ObjSet[i].stats.tmax[j];
 		}
-		PrintObjStats(&(obj->stats));
+		//PrintObjStats(&(obj->stats));
 	}
 
-printf("  Total\n");
-PrintObjStats(&(obj->stats));
+//printf("  Total\n");
+//PrintObjStats(&(obj->stats));
 
 	AllocObjFile(obj);
 	ObjStats counters;
@@ -1439,7 +1439,7 @@ PrintObjStats(&(obj->stats));
 		counters.mats += ObjSet[i].stats.mats;
 	}
 
-printf("merge done\n");
+//printf("merge done\n");
 	return nObjs;
 }
 
