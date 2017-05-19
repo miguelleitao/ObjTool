@@ -848,7 +848,7 @@ void ExplodeOutputFile(char *OutputFile, ObjFile *obj) {
 	// Each part is saved to file named OutputFile_n_imat_iobj_igrp.obj
 
 	if ( ! OutputFile ) {
-	    fprintf(stderr,"Explode requires the output file name using the -o option");
+	    fprintf(stderr,"Explode requires the output file name using the -O option.\n");
 	    return;
 	}
 	assert(obj); 
@@ -875,22 +875,22 @@ printf("    Adding face %d\n", iface);
 		obj_part->faces[i].nodes = 0;
 	    int part_cut = 0;
 	    while ( ! part_cut ) {
-		while ( imat<obj_part->stats.mats && iface==obj_part->mats[imat].line ) {
-		    imat++;
-		    part_cut = 1;
-	    	}
-		while ( iobj<obj_part->stats.objs && iface==obj_part->objs[iobj].line ) {
-		    iobj++;
-		    part_cut = 1;
-	    	}
-		while ( igrp<obj_part->stats.grps && iface==obj_part->grps[igrp].line ) {
-		    igrp++;
-		    part_cut = 1;
-	    	}
-		iface++;
+            while ( imat<obj_part->stats.mats && iface==obj_part->mats[imat].line ) {
+                imat++;
+                part_cut = 1;
+            }
+            while ( iobj<obj_part->stats.objs && iface==obj_part->objs[iobj].line ) {
+                iobj++;
+                part_cut = 1;
+            }
+            while ( igrp<obj_part->stats.grps && iface==obj_part->grps[igrp].line ) {
+                igrp++;
+                part_cut = 1;
+            }
+            iface++;
 	    }
 	    for( i=iface ; i<obj_part->stats.faces ; i++ )
-		obj_part->faces[i].nodes = 0;
+            obj_part->faces[i].nodes = 0;
 
 	    SetUseCounters(obj_part);
 	    SetIndexs( obj_part );
