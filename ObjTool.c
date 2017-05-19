@@ -875,6 +875,7 @@ printf("    Adding face %d\n", iface);
 		obj_part->faces[i].nodes = 0;
 	    int part_cut = 0;
 	    while ( ! part_cut ) {
+                printf("  iface:%d\n", iface);
 		while ( imat<obj_part->stats.mats && iface==obj_part->mats[imat].line ) {
 		    imat++;
 		    part_cut = 1;
