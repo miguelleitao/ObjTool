@@ -848,7 +848,7 @@ void ExplodeOutputFile(char *OutputFile, ObjFile *obj) {
 	// Each part is saved to file named OutputFile_n_imat_iobj_igrp.obj
 
 	if ( ! OutputFile ) {
-	    fprintf(stderr,"Explode requires the output file name using the -o option");
+	    fprintf(stderr,"Explode requires the output file name using the -O option.\n");
 	    return;
 	}
 	assert(obj); 
@@ -891,7 +891,7 @@ printf("    Adding face %d\n", iface);
 		iface++;
 	    }
 	    for( i=iface ; i<obj_part->stats.faces ; i++ )
-		obj_part->faces[i].nodes = 0;
+            obj_part->faces[i].nodes = 0;
 
 	    SetUseCounters(obj_part);
 	    SetIndexs( obj_part );
