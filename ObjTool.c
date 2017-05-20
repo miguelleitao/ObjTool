@@ -234,6 +234,17 @@ printf("printing stats\n");
 	printf("ShadGrp:	%d\n", os->shds);
 }
 
+void PrintLongObjStats(ObjFile *obj) {
+        PrintObjStats(&(obj->stats));
+	int i;
+	for( i=0 ; i<obj->stats.mats ; i++ )
+            printf("use mat[%d]: %d : %s\n", i+1, obj->mats[i].line, obj->mats[i].name);
+	for( i=0 ; i<obj->stats.objs ; i++ )
+            printf("objs[%d]: %d : %s\n", i+1, obj->objs[i].line, obj->objs[i].name);
+	for( i=0 ; i<obj->stats.grps ; i++ )
+            printf("grps[%d]: %d : %s\n", i+1, obj->grps[i].line, obj->grps[i].name);
+            
+}
 void PrintFullObjStats(ObjFile *obj) {
 	PrintObjStats(&(obj->stats));
 	int i;
@@ -769,6 +780,7 @@ void SaveObjFile(char *fname, ObjFile *obj) {
 		}
 	        //printf("    abriu\n");
 	}
+	fprintf(fout,"# file written by ObjTool\n\n");
 	for( i=0 ; i<obj->stats.verts ; i++ ) 
 	    if ( obj->counts.verts[i] > 0 ) {
 		fprintf(fout,"v %f %f %f\n", obj->verts[i][0],obj->verts[i][1],obj->verts[i][2]);
@@ -777,7 +789,7 @@ void SaveObjFile(char *fname, ObjFile *obj) {
 	//printf("    gravou verts\n");
 	for( i=0 ; i<obj->stats.texts ; i++ ) 
 	    if ( obj->counts.texts[i] > 0 ) {
-		fprintf(fout,"vt %f %f %f\n", obj->texts[i][0],obj->texts[i][1],obj->texts[i][2]);
+		fprintf(fout,"vt %f %f\n", obj->texts[i][0],obj->texts[i][1]);
 		nt++;
 	    }
 
@@ -862,8 +874,10 @@ void ExplodeOutputFile(char *OutputFile, ObjFile *obj) {
 	char fname[MAX_FILE_NAME_LEN];
 	unsigned int fnum = 0;
 
+        
 	do {
 printf("    Adding face %d\n", iface);
+            // Create new obj_part
 	    ObjFile *obj_part;
 	    obj_part = Malloc(1,sizeof(ObjFile));
 
@@ -871,25 +885,34 @@ printf("    Adding face %d\n", iface);
 	
 	    SetUseCounters(obj_part);
 	    
+            // Clear all previous faces
 	    for( i=0 ; i<iface ; i++ )
 		obj_part->faces[i].nodes = 0;
+            
+            // Find the part end
+            // Part end when at least one change detected from {imat,iobj,igrp}
 	    int part_cut = 0;
-	    while ( ! part_cut ) {
-                printf("  iface:%d\n", iface);
-		while ( imat<obj_part->stats.mats && iface==obj_part->mats[imat].line ) {
-		    imat++;
-		    part_cut = 1;
-	    	}
-		while ( iobj<obj_part->stats.objs && iface==obj_part->objs[iobj].line ) {
-		    iobj++;
-		    part_cut = 1;
-	    	}
-		while ( igrp<obj_part->stats.grps && iface==obj_part->grps[igrp].line ) {
-		    igrp++;
-		    part_cut = 1;
-	    	}
+	    while ( ! part_cut && iface<obj_part->stats.faces ) {
+                //printf("  iface:%d\n", iface);
+                //if ( iface>0 ) {        // ignore directive before the first face
+                    while ( imat<obj_part->stats.mats && iface==obj_part->mats[imat].line ) {
+                        imat++;
+                        if ( iface>0 ) part_cut = 1;
+                    }
+                    while ( iobj<obj_part->stats.objs && iface==obj_part->objs[iobj].line ) {
+                        iobj++;
+                        if ( iface>0 ) part_cut = 1;
+                    }
+                    while ( igrp<obj_part->stats.grps && iface==obj_part->grps[igrp].line ) {
+                        igrp++;
+                        if ( iface>0 )part_cut = 1;
+                    }
+               // }
 		iface++;
 	    }
+	    
+	    // End of part detected.
+	    // Clear all remaining faces.
 	    for( i=iface ; i<obj_part->stats.faces ; i++ )
             obj_part->faces[i].nodes = 0;
 
@@ -897,7 +920,8 @@ printf("    Adding face %d\n", iface);
 	    SetIndexs( obj_part );
 
 	    snprintf(fname,MAX_FILE_NAME_LEN,"%s_%u_%d_%d_%d.obj", OutputFile, fnum, imat, iobj, igrp);
-printf("  Saving PartFile '%s'\n",fname); 	    
+printf("  Saving PartFile '%s'\n",fname); 
+printf("    iface:%d\n", iface);
 	    SaveObjFile(fname, obj_part );
 
 	    Free(obj_part);
@@ -1347,6 +1371,10 @@ int GetOptions(int argc, char** argv) {
     return i;
 }
 
+//  Joins nObjs ObjFiles from ObjSet array.
+//  Outpus whole ObjFile in buffer pointed by obj.
+//  obj must be pre allocated 
+//  If nObjs==1, copies ObjFile pointed by ObjSet to obj.
 int JoinObjFiles(int nObjs, ObjFile ObjSet[], ObjFile *obj) {
 
 	ResetObjStats( &(obj->stats) );
@@ -1483,8 +1511,13 @@ int main(int argc, char **argv) {
 	
 	SetUseCounters(&obj);
 	if ( info ) {
-		    PrintObjStats(&(obj.stats));
-		    exit(0);
+            if ( Verbose>1 )
+			PrintFullObjStats(&obj);
+            else if ( Verbose>0 )
+                        PrintLongObjStats(&obj);
+            else
+                        PrintObjStats(&(obj.stats));
+            exit(0);
         }
 	if ( Verbose ) {
 		    if ( Verbose>3 )
