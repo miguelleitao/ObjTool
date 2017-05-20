@@ -26,7 +26,7 @@ ObjectTool
 
 _________
 ### Usage
-
+```
 ObjTool [options] inputfile1.obj inputfile2.obj
     -i                  file info
     -xmin value         define xmin
@@ -48,10 +48,11 @@ ObjTool [options] inputfile1.obj inputfile2.obj
     -rx value	        rotate around xx axis
     -ry value	        rotate around yy axis
     -rz value	        rotate around zz axis
-    -R                  use relative coords
+    -R                  use relative coords    
     -M		            Do not output mtllib directives
     -c                  solid cut
     -n		            negate face filter condition( -g,-m )
     -O outfile          output to outfile (default: stdout)
     -e		            Explode outfile into single objects
-    -S shadow_file      shadow output to shadow_file (default: no shadow ouput)
+    -S shadow_file      shadow output to shadow_file (default: no shadow ouput)
+```
