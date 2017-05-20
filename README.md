@@ -27,7 +27,7 @@ ObjectTool
 _________
 ### Usage
 
-ObjTool [options] inputfile1.obj inputfile2.obj ...\n");
+ObjTool [options] inputfile1.obj inputfile2.obj
     -i                  file info
     -xmin value         define xmin
     -xmax value         define xmax
@@ -37,7 +37,7 @@ ObjTool [options] inputfile1.obj inputfile2.obj ...\n");
     -zmax value         define zmax
     -o name             select object
     -g name 	        select obj group
-    -m name	        select material
+    -m name	            select material
     -tx value	        translate x
     -ty value	        translate y
     -tz value	        translate z
@@ -49,11 +49,9 @@ ObjTool [options] inputfile1.obj inputfile2.obj ...\n");
     -ry value	        rotate around yy axis
     -rz value	        rotate around zz axis
     -R                  use relative coords
-    -M		        Do not output mtllib directives
+    -M		            Do not output mtllib directives
     -c                  solid cut
-    -n		        negate face filter condition( -g,-m )
+    -n		            negate face filter condition( -g,-m )
     -O outfile          output to outfile (default: stdout)
-    -e		        Explode outfile into single objects
-    -S shadow_file      shadow output to shadow_file (default: no shadow ouput)\n");
-    
-}
+    -e		            Explode outfile into single objects
+    -S shadow_file      shadow output to shadow_file (default: no shadow ouput)
