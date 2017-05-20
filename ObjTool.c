@@ -7,7 +7,7 @@
  * 	Not all OBJ file format specs are implemented.
  */
 
-#define VERSION 0.13.2
+#define VERSION 0.13.4
 #define _GNU_SOURCE
  	
 #include <stdio.h>
