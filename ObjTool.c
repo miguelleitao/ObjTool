@@ -781,25 +781,32 @@ void SaveObjFile(char *fname, ObjFile *obj) {
 	        //printf("    abriu\n");
 	}
 	fprintf(fout,"# file written by ObjTool\n\n");
+        
+        // Save Vertexes
 	for( i=0 ; i<obj->stats.verts ; i++ ) 
 	    if ( obj->counts.verts[i] > 0 ) {
 		fprintf(fout,"v %f %f %f\n", obj->verts[i][0],obj->verts[i][1],obj->verts[i][2]);
 		nv++;
 	    }
 	//printf("    gravou verts\n");
+	
+	// Save Texture Coords
 	for( i=0 ; i<obj->stats.texts ; i++ ) 
 	    if ( obj->counts.texts[i] > 0 ) {
 		fprintf(fout,"vt %f %f\n", obj->texts[i][0],obj->texts[i][1]);
 		nt++;
 	    }
-
 	//printf("    gravou text verts\n");
+	
+	// Save Norms
 	for( i=0 ; i<obj->stats.norms ; i++ ) 
 	    if ( obj->counts.norms[i] > 0 ) {
 		fprintf(fout,"vn %f %f %f\n", obj->norms[i][0],obj->norms[i][1],obj->norms[i][2]);
 		nn++;
 	    }
 	//printf("    gravou norms\n");
+	
+	// Save faces
 	int gidx=0,oidx=0,midx=0,lidx=0;
 	for( i=0 ; i<obj->stats.faces ; i++ ) {
 	    int n, ci;
