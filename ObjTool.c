@@ -772,7 +772,7 @@ void SaveObjFile(char *fname, ObjFile *obj) {
 	int i;
 	int nv=0, nt=0, nn=0;
 	if ( fname && *fname ) {
-		//printf("vai abrir ficheiro %s\n",fname);
+		printf("Writing file '%s'\n",fname);
 		fout = fopen(fname,"w");
 		if ( ! fout ) {
 		    fprintf(stderr,"Cannot open output file '%s'\n", fname);
@@ -804,42 +804,38 @@ void SaveObjFile(char *fname, ObjFile *obj) {
 		fprintf(fout,"vn %f %f %f\n", obj->norms[i][0],obj->norms[i][1],obj->norms[i][2]);
 		nn++;
 	    }
-	//printf("    gravou norms\n");
+	printf("    gravou norms\n");
 	
 	// Save faces
 	int gidx=0,oidx=0,midx=0,lidx=0;
 	for( i=0 ; i<obj->stats.faces ; i++ ) {
-	    int n, ci;
-
-	    while ( lidx<obj->stats.libs && i==obj->libs[lidx].line ) {
-		    fprintf(fout,"mtllib %s\n",obj->libs[lidx].name);
-		    lidx++;
+	    int n;
+            printf("  Working on face %d\n",i);
+	    if ( lidx<obj->stats.libs && i>=obj->libs[lidx].line ) {
+                printf(" face %d, lidx %d\n", i, lidx);
+                while( i<obj->stats.faces && obj->faces[i].nodes <= 0 ) i++;
+                printf("   face %d, lidx %d\n", i, lidx);
+                while( lidx<obj->stats.libs && i>=obj->libs[lidx].line ) lidx++;
+                printf("     face %d, lidx %d\n", i, lidx);
+                fprintf(fout,"mtllib %s\n",obj->libs[lidx-1].name);
 	    }
-	    while ( oidx<obj->stats.objs && i==obj->objs[oidx].line ) {
-		//for( ci=obj->objs[oidx].line ; oidx<obj->stats.objs-1 && ci<obj->objs[oidx+1].line ; ci++ ) 
-		//    if ( obj->faces[ci].nodes > 0 ) {
-			fprintf(fout,"o %s\n",obj->objs[oidx].name);
-		//	break;
-		//    }
-		oidx++;
+	    printf(" libs done\n");
+	    if ( oidx<obj->stats.objs && i>=obj->objs[oidx].line ) {
+                while( i<obj->stats.faces && obj->faces[i].nodes <= 0 ) i++;
+                while( oidx<obj->stats.objs && i>=obj->objs[oidx].line ) oidx++;
+		fprintf(fout,"o %s\n",obj->objs[oidx-1].name);
 	    }
-	    while ( gidx<obj->stats.grps && i==obj->grps[gidx].line ) {
-		//for( ci=obj->grps[gidx].line ; gidx<obj->stats.grps-1 && ci<obj->grps[gidx+1].line ; ci++ )
-		//    if ( obj->faces[ci].nodes > 0 ) {
-		    	fprintf(fout,"g %s\n",obj->grps[gidx].name);
-		//	break;
-		//    }
-		gidx++;
+	    if ( gidx<obj->stats.grps && i>=obj->grps[gidx].line ) {
+                while( i<obj->stats.faces && obj->faces[i].nodes <= 0 ) i++;
+                while( gidx<obj->stats.grps && i>=obj->grps[gidx].line ) gidx++;
+                fprintf(fout,"g %s\n",obj->grps[gidx-1].name);
 	    }
-	    while ( midx<obj->stats.mats && i==obj->mats[midx].line ) {
-		//for( ci=obj->mats[midx].line ; midx<obj->stats.mats-1 && ci<obj->mats[midx+1].line ; ci++ ) 
-		//    if ( obj->faces[ci].nodes > 0 ) {
-			fprintf(fout,"usemtl %s\n",obj->mats[midx].name);
-		//	break;
-		//    }
-		midx++;
+	    if ( midx<obj->stats.mats && i>=obj->mats[midx].line ) {
+                while( i<obj->stats.faces && obj->faces[i].nodes <= 0 ) i++;
+                while( midx<obj->stats.mats && i>=obj->mats[midx].line ) midx++;
+		fprintf(fout,"usemtl %s\n",obj->mats[midx-1].name);
 	    }
-
+            if ( i>=obj->stats.faces ) break;
 	    if ( obj->faces[i].nodes <= 0 ) continue;  // face erased
 	    fprintf(fout,"f "); 
 	    for( n=0 ; n<obj->faces[i].nodes ; n++ ) {
