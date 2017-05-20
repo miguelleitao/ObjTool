@@ -816,27 +816,27 @@ void SaveObjFile(char *fname, ObjFile *obj) {
 		    lidx++;
 	    }
 	    while ( oidx<obj->stats.objs && i==obj->objs[oidx].line ) {
-		for( ci=obj->objs[oidx].line ; oidx<obj->stats.objs-1 && ci<obj->objs[oidx+1].line ; ci++ ) 
-		    if ( obj->faces[ci].nodes > 0 ) {
+		//for( ci=obj->objs[oidx].line ; oidx<obj->stats.objs-1 && ci<obj->objs[oidx+1].line ; ci++ ) 
+		//    if ( obj->faces[ci].nodes > 0 ) {
 			fprintf(fout,"o %s\n",obj->objs[oidx].name);
-			break;
-		    }
+		//	break;
+		//    }
 		oidx++;
 	    }
 	    while ( gidx<obj->stats.grps && i==obj->grps[gidx].line ) {
-		for( ci=obj->grps[gidx].line ; gidx<obj->stats.grps-1 && ci<obj->grps[gidx+1].line ; ci++ )
-		    if ( obj->faces[ci].nodes > 0 ) {
+		//for( ci=obj->grps[gidx].line ; gidx<obj->stats.grps-1 && ci<obj->grps[gidx+1].line ; ci++ )
+		//    if ( obj->faces[ci].nodes > 0 ) {
 		    	fprintf(fout,"g %s\n",obj->grps[gidx].name);
-			break;
-		    }
+		//	break;
+		//    }
 		gidx++;
 	    }
 	    while ( midx<obj->stats.mats && i==obj->mats[midx].line ) {
-		for( ci=obj->mats[midx].line ; midx<obj->stats.mats-1 && ci<obj->mats[midx+1].line ; ci++ ) 
-		    if ( obj->faces[ci].nodes > 0 ) {
+		//for( ci=obj->mats[midx].line ; midx<obj->stats.mats-1 && ci<obj->mats[midx+1].line ; ci++ ) 
+		//    if ( obj->faces[ci].nodes > 0 ) {
 			fprintf(fout,"usemtl %s\n",obj->mats[midx].name);
-			break;
-		    }
+		//	break;
+		//    }
 		midx++;
 	    }
 
@@ -915,7 +915,7 @@ printf("    Adding face %d\n", iface);
                         if ( iface>0 )part_cut = 1;
                     }
                // }
-		iface++;
+		if ( ! part_cut) iface++;
 	    }
 	    
 	    // End of part detected.
@@ -934,7 +934,7 @@ printf("    iface:%d\n", iface);
 	    Free(obj_part);
 
 	    fnum++;  // next file partition
-
+            //iface++;
 	} while ( iface < obj->stats.faces );	
 
 }
@@ -1032,7 +1032,7 @@ void CleanFaces(ObjFile *obj) {
 	for( i=0 ; i<obj->stats.faces ; i++ ) {
 	    // Remove face if material matches/does not match selected Material
 	    if ( Material!=NULL ) {
-		while ( midx<obj->stats.mats && i==obj->mats[midx].line )     midx++;
+		while ( midx<=obj->stats.mats && i==obj->mats[midx].line )     midx++;
 		if ( Negate ) {
 			if ( midx && strcmp(Material,obj->mats[midx-1].name)==0 ) {
 			    obj->faces[i].nodes = 0;
@@ -1048,7 +1048,7 @@ void CleanFaces(ObjFile *obj) {
 	    }
 	    if ( SelObjects>0 ) {
 	        // Remove face if object matches/does not match selected Object
-		while ( oidx<obj->stats.objs && i==obj->objs[oidx].line )     oidx++;
+		while ( oidx<=obj->stats.objs && i==obj->objs[oidx].line )     oidx++;
 		// Current Test implementation is limited to 1 object ( SelectObject[0] )
 		if ( Negate ) {
 			if ( oidx && strcmp(SelectObject[0],obj->objs[oidx-1].name)==0 ) {
@@ -1065,7 +1065,7 @@ void CleanFaces(ObjFile *obj) {
 	    }
 	    if ( SelGroups>0 ) {
 	        // Remove face if group matches/does not match selected Group
-		while ( gidx<obj->stats.grps && i==obj->grps[gidx].line )     gidx++;
+		while ( gidx<=obj->stats.grps && i==obj->grps[gidx].line )     gidx++;
 		// Current Test implementation is limited to 1 group ( SelectGroup[0] )
 		if ( Negate ) {
 			if ( gidx && strcmp(SelectGroup[0],obj->grps[gidx-1].name)==0 ) {
@@ -1080,7 +1080,10 @@ void CleanFaces(ObjFile *obj) {
 			}
 		}
 	    }
-	    // Remove face if it includes inexistent vertexs
+	    // Remove face if it includes inexistent vertexs.
+	    // Maybe try other options in the future:
+	    //     - keep faces that have at least on selected vertex
+	    //     - Adjust position of unselected vertexes so that they go to the border of the selected area.
 	    for( n=0 ; n<obj->faces[i].nodes ; n++ ) {
 		int v = obj->faces[i].Node[n][0];
 		if ( v<1 || v>obj->stats.verts  || obj->counts.verts[v-1]<0 ) {
