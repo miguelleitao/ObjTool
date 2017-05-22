@@ -115,6 +115,8 @@ int SelObjects = 0;;
 #define SinF(x) ( sinf(x) )
 #define CosF(x) ( cosf(x) )
 
+#define AngNormalize(x) ( (x)>PI ? (x-2*PI) : ( (x)<-PI ? (x+2*PI) : (x) ) )
+
 int JoinObjFiles(int nObjs, ObjFile ObjSet[], ObjFile *obj);
 void SetUseCounters(ObjFile *obj);
 void SetIndexs(ObjFile *obj);
@@ -378,9 +380,9 @@ int VerticalCrossSegment(Vert *p, Vert v1, Vert v2) {
 	double y0 = v1[1]-m*(v1[0]-(*p)[0]);
 	if ( y0>(*p)[1] ) {
 		if ( dy>0 ) {
-			if ( y0-v1[1]>.1 && y0-v2[1]<-.1 ) res = 1;
+			if ( y0-v1[1]> .1 && y0-v2[1]<-.1 ) res = 1;
 		} else {
-			if ( y0-v1[1]<-.1 && y0-v2[1]>.1 ) res = 1;
+			if ( y0-v1[1]<-.1 && y0-v2[1]> .1 ) res = 1;
 		}
 	}
 	//printf( "        v1 %f %f, v2 %f %f, res:%d\n", v1[0],v1[1],v2[0],v2[1],res );
@@ -398,6 +400,23 @@ int PointInPolygon(int v, Vert *verts, FaceNode *node, int n) {
 	cross += VerticalCrossSegment(p,verts[node[0][0]],verts[node[n-1][0]]);
 //	printf("    PointInPoly n:%d vert %d, point p %f %f: cross: %d\n",n,v,(*p)[0],(*p)[1], cross);
 	return cross % 2;
+}
+
+double FindClosestIntersection(float x1, float y1,
+                               float x2,float y2, 
+                               ObjFile *obj, 
+                               int *nfi, int *nni) {
+    // finds edge from obj that crosses segment (x1,y1)-(x2,y2) nearest to (x1,y1)
+    double dist = MAX_FLOAT;
+    int fi, ni;
+    double dy = y2-y1;
+    double dx = x2-x1;
+    
+    for( fi=0 ; fi<obj->stats.faces ; fi++ ) {
+        for( ni=0 ; ni<obj->faces[fi].nodes ; ni++ ) {
+            
+        }
+    }
 }
 
 ObjFile *CreateShadowObj_v1(ObjFile *obj) {
@@ -742,43 +761,114 @@ ObjFile *CreateShadowObj_Projection(ObjFile *obj) {
 	}
    
    // Find surrounding convex polygon
-   
    float xp = xmin;
    float yp = ymin;
+   double ap = PI/2.;
    int vp = vmin;
 
-   float sum_x = 0.;
-   float sum_y = 0.;
+   float sum_x = xp;
+   float sum_y = yp;
+   
+   {    // Register first vertex
+       	int si = shadow->stats.verts;
+	shadow->verts[si][0] = xp;
+	shadow->verts[si][ycoord] = yp;
+	shadow->stats.verts = si+1;
+   }
+   printf("starting vertex %d, %f, %f\n", vp,xp,yp);
+   
    // Looking from left to right
    while (1) {
-	double mmax = -MAX_FLOAT;
+	double amax = -MAX_FLOAT;
 	double ymax = -MAX_FLOAT;
         double xmax = -MAX_FLOAT;
+        int    vmax = -1;
         // Find next edge, with greatest slope
         // Edge must contain current vertex
         for( int fi=0 ; fi<obj->stats.faces ; fi++ ) {
+            //printf("   testing face %d, nodes %d\n", fi, obj->faces[fi].nodes);
             int ni, vidx;
             for( ni=0 ; ni<obj->faces[fi].nodes ; ni++ ) {
-                vidx = obj->faces[ni].Node[ni][0];
+                vidx = obj->faces[fi].Node[ni][0];
                 if ( vp==vidx ) break;   // vertex_idx matches
                 if ( xp==obj->verts[vidx][0] && yp==obj->verts[vidx][ycoord] )
                     break;      // vertex position matches
             }
             if ( ni>=obj->faces[fi].nodes ) continue;
+            //printf(" ## face match %d, node %d\n", fi, ni);
             // Match. Face[fi] contains current vertex in node ni.
             // Since faces are convex, analyze only edges to adjacent vertexes.
             int ei;
+            // previous node
             ei = ni-1;
             if ( ei<0 ) ei=obj->faces[fi].nodes-1;
             vidx = obj->faces[ni].Node[ei][0];
-            if ( vp!=vidx ) {   // Avoid dupplicated vertexes
-                float x = obj->verts[i][0];
-                float y = obj->verts[i][ycoord];
-                
+            if ( vp!=vidx ) {   // Avoid duplicated vertexes
+                float x = obj->verts[vidx][0];
+                float y = obj->verts[vidx][ycoord];
+                if ( x!=xp || y!=yp ) {
+                    double ang = atan2(y-yp,x-xp);
+                    double dang = AngNormalize(ang-ap);
+                    if ( dang<PI && dang>amax ) {
+                        amax = dang;
+                        xmax = x;
+                        ymax = y;
+                        vmax = vidx;
+                    }       
+                }
             }
+            // next node
+            ei = ni+1;
+            if ( ei>=obj->faces[fi].nodes ) ei = 0;
+            vidx = obj->faces[ni].Node[ei][0];
+            if ( vp!=vidx ) {   // Avoid duplicated vertexes
+                float x = obj->verts[vidx][0];
+                float y = obj->verts[vidx][ycoord];
+                if ( x!=xp || y!=yp ) {
+                    double ang = atan2(y-yp,x-xp);
+                    double dang = AngNormalize(ang-ap);
+                    if ( dang<PI && dang>amax ) {
+                        amax = dang;
+                        xmax = x;
+                        ymax = y;
+                        vmax = vidx;
+                    }       
+                }
+            }
+        } // for all faces
+        if ( amax<-MAX_FLOAT/2. ) break;
+        if ( vmax==vmin ) break;    // round complete
+        // best edge got
+        double dx = xmax-xp;
+        double dy = ymax-yp;
+        ap = atan2(dy,dx);
+        // Follow this edge.
+        // Next vertex will be (xmax,ymax) only if edge is not intersected
+        // Must test intersection with all edges in every face.
+        int nfi, nni;
+        double dist = -1.; //FindClosestIntersection(xp,yp,xmax,ymax,&nfi,&nni);
+        if ( dist>0. ) {
+            double len = sqrt(dx*dx+dy*dy);
+            xp += dx*dist/len;
+            yp += dy*dist/len;
+            vp = -1;    // Unexistant/new vertex
         }
-        
-        
+        else {  // no intersections found
+            xp = xmax;
+            yp = ymax;
+            vp = vmax;
+        }
+        // Register new vertex
+        printf("got shadow vertex %d %f %f\n",vp,xp,yp);
+        sum_x += xp;
+        sum_y += yp;
+	int si = shadow->stats.verts;
+	shadow->verts[si][0] = xp;
+	shadow->verts[si][ycoord] = yp;
+	shadow->stats.verts = si+1;
+   }
+   
+   /*
         // old part
 	for( i=0 ; i<obj->stats.verts ; i++ ) {
 	    float x = obj->verts[i][0];
@@ -810,6 +900,7 @@ ObjFile *CreateShadowObj_Projection(ObjFile *obj) {
 	shadow->verts[si][ycoord] = yp;
 	shadow->stats.verts = si+1;
    }
+   */
    /* comment to allow compiling
    // Looking from right to left
    while (1) {
@@ -1833,7 +1924,8 @@ int main(int argc, char **argv) {
 
 	if ( ShadowOutputFile ) {
 printf("shadow\n");
-			ObjFile *Shadow = CreateShadowObj(&obj);
+			//ObjFile *Shadow = CreateShadowObj(&obj);
+                        ObjFile *Shadow = CreateShadowObj_Projection(&obj);
                         SetUseCounters(Shadow);
                         SetIndexs(Shadow);
 PrintObjStats(&(Shadow->stats));
