@@ -798,7 +798,7 @@ ObjFile *CreateShadowObj_Projection(ObjFile *obj) {
 	shadow->verts[si][ycoord] = yp;
 	shadow->stats.verts = si+1;
    }
-   /*
+   /* comment to allow compiling
    // Looking from right to left
    while (1) {
 	double mmax = -MAX_FLOAT;
