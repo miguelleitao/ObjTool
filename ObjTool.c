@@ -133,6 +133,10 @@ void *Malloc(int n, size_t dim) {
 }
 
 void Free(void *p) {
+    if ( ! p ) {
+        if ( Verbose ) fprintf(stderr,"Cannot free unallocated memory\n");
+        return;
+    }
 	long *tag_p = p-MEM_META_INFO_SIZE;
 	if ( *tag_p == MEM_TAG ) {
 		*tag_p = 0L;
@@ -489,56 +493,53 @@ ObjFile *CreateShadowObj_v1(ObjFile *obj) {
 }
 
 ObjFile *CreateShadowObj(ObjFile *obj) {
-fprintf(stderr,"Creating shadow\n");
-  // nova versao por convex hull
-  //  printf("Creating shadow\n");
+    // new version using convex hull
+    int ycoord = 2;
+    int zcoord = 1;
+    if (Verbose) fprintf(stderr,"Creating shadow\n");
+  
     int i, si;	// face indexs
-/*
-    double max[2];
-    double min[2];
-    for( i=0 ; i<2 ; i++ ) {
-	max[i] = -MAX_FLOAT;
-	min[i] =  MAX_FLOAT;
-    }
-*/
     ObjFile *shadow = Malloc(1,sizeof(ObjFile));
 
     shadow->stats.verts = 0;
     shadow->verts = Malloc(obj->stats.verts, sizeof(Vert));
 
     shadow->stats.faces = 0;
-  
-    shadow->stats.norms = 1;	// Only one norm, facing up.
 
-    shadow->stats.texts = 0;
-
-	shadow->norms = Malloc(1, sizeof(Norm));
+        // Add one normal
+        shadow->stats.norms = 1;	// Only one norm, facing up.
+	shadow->norms = Malloc(shadow->stats.norms, sizeof(Norm));
 	shadow->norms[0][0] = 0.;
-	shadow->norms[0][1] = 0.;
-	shadow->norms[0][2] = 1.;	// Up vector
+	shadow->norms[0][ycoord] = 0.;
+	shadow->norms[0][zcoord] = 1.;	// Up vector
 
-	
-	shadow->texts = 0;
-	shadow->grps = 0 ;
-	shadow->mats = 0;
-	shadow->objs = 0;
-	shadow->libs = 0;
-	shadow->shds = 0;
+        // Add two texture coords
+	shadow->stats.texts = 2;
+	shadow->texts = Malloc(shadow->stats.texts, sizeof(Text));
+	shadow->texts[0][0] = 0.;
+	shadow->texts[0][1] = 0.;
+	shadow->texts[1][0] = 0.9;
+	shadow->texts[1][1] = 0.9;
+        
+	shadow->grps = NULL;
+	shadow->mats = NULL;
+	shadow->objs = NULL;
+	shadow->libs = NULL;
+	shadow->shds = NULL;
 
-	shadow->counts.verts = 0;
-	shadow->counts.norms = 0;
-	shadow->counts.texts = 0;
+	shadow->counts.verts = NULL;
+	shadow->counts.norms = NULL;
+	shadow->counts.texts = NULL;
 
-	shadow->order.verts = obj->order.verts;
-	shadow->order.texts = obj->order.texts;
-	shadow->order.norms = obj->order.norms ;
-
+        shadow->order.verts = NULL;
+	shadow->order.texts = NULL;
+	shadow->order.norms = NULL;
+        
    // Find z min
    float zmin = MAX_FLOAT;
    for( i=0 ; i<obj->stats.verts ; i++ )
-	if ( obj->verts[i][2]<zmin )
-		zmin = obj->verts[i][2];
-
+	if ( obj->verts[i][zcoord]<zmin )
+		zmin = obj->verts[i][zcoord];
 
    // Find leftest vertex
    float xmin = MAX_FLOAT;
@@ -546,20 +547,31 @@ fprintf(stderr,"Creating shadow\n");
    for( i=0 ; i<obj->stats.verts ; i++ )
 	if ( obj->verts[i][0]<xmin ) {
 		xmin = obj->verts[i][0];
-		ymin = obj->verts[i][1];
+		ymin = obj->verts[i][ycoord];
 	}
    
-   // Find next vertex, with greatest slope
+   // Find surrounding convex polygon
    float xmax, ymax;
    float xp = xmin;
    float yp = ymin;
+   float sum_x = 0.;
+   float sum_y = 0.;
+   // Looking from left to right
    while (1) {
 	double mmax = -MAX_FLOAT;
 	ymax = xmax = -MAX_FLOAT;
+        // Find next vertex, with greatest slope
 	for( i=0 ; i<obj->stats.verts ; i++ ) {
 	    float x = obj->verts[i][0];
-	    float y = obj->verts[i][1];
-	    if ( x<=xp ) continue;
+	    float y = obj->verts[i][ycoord];
+	    if ( x<xp ) continue;
+            if ( x==xp ) {      // Vertical
+                if ( y<=yp ) continue;
+                mmax = MAX_FLOAT;
+		xmax = x;
+		ymax = y;
+                break;
+            }
 	    double m = (y-yp)/(x-xp);
 	    if ( m>mmax ) {
 		mmax = m;
@@ -567,58 +579,308 @@ fprintf(stderr,"Creating shadow\n");
 		ymax = y;
 	    }
 	}
-printf("mmax: %f\n",mmax);
+        printf("mmax: %f\n",mmax);
 	if ( mmax<=-MAX_FLOAT/2. ) break;
 	// new border vertex found
 	xp = xmax;
 	yp = ymax;
+        sum_x += xmax;
+        sum_y += ymax;
 	si = shadow->stats.verts;
 	shadow->verts[si][0] = xp;
-	shadow->verts[si][1] = yp;
+	shadow->verts[si][ycoord] = yp;
 	shadow->stats.verts = si+1;
-    }
+   }
+   // Looking from right to left
+   while (1) {
+	double mmax = -MAX_FLOAT;
+	ymax = xmax = -MAX_FLOAT;
+        // Find next vertex, with largest slope
+	for( i=0 ; i<obj->stats.verts ; i++ ) {
+	    float x = obj->verts[i][0];
+	    float y = obj->verts[i][ycoord];
+	    if ( x>xp ) continue;
+            if ( x==xp ) {      // Vertical
+                if ( y>=yp ) continue;
+                mmax = MAX_FLOAT;
+		xmax = x;
+		ymax = y;
+                break;
+            }
+	    double m = (y-yp)/(x-xp);
+	    if ( m>mmax ) {
+		mmax = m;
+		xmax = x;
+		ymax = y;
+	    }
+	}
+        printf("mmax: %f\n",mmax);
+	if ( mmax<=-MAX_FLOAT/2. ) break;
+	// new border vertex found
+	xp = xmax;
+	yp = ymax;
+        sum_x += xmax;
+        sum_y += ymax;
+	si = shadow->stats.verts;
+	shadow->verts[si][0] = xp;
+	shadow->verts[si][ycoord] = yp;
+	shadow->stats.verts = si+1;
+   }
+   
+   if ( shadow->stats.verts<3 ) {
+       fprintf(stderr,"Invalid shadow\n");
+       return shadow;
+   }
+   
+   // Add central vertex
+   float xmed = sum_x / shadow->stats.verts;
+   float ymed = sum_y / shadow->stats.verts;
+   si = shadow->stats.verts;
+   shadow->verts[si][0] = xmed;
+   shadow->verts[si][ycoord] = ymed;
+   shadow->stats.verts = si+1;
+   printf("Shadow has %d vertexes\n", shadow->stats.verts);
    
    // smachdown zz coords to zmin
    for( i=0 ; i<shadow->stats.verts ; i++ )
-	shadow->verts[i][2] = zmin;
-printf("shadow done\n");
-  return shadow;
-    for( i=0 ; i<obj->stats.faces ; i++ ) {
-	    int n;
-	    short int inside = 0;
-//printf("Testing face %d, %d nodes\n", i, obj->faces[i].nodes);
-	    for( n=0 ; n<obj->faces[i].nodes ; n++ ) {
-		//printf(" Testing node %d\n",n);
-		int v = obj->faces[i].Node[n][0];
-		if ( v<1 || v>obj->stats.verts ) {
-		    fprintf(stderr,"Vertice %d not found on face %d, node %d/%d.\n", v, i, n, obj->faces[i].nodes);
-		    break;
-		}
-		// Test if vertex is outside polygon already draw
-		int pp;
-		for( pp=0 ; pp<shadow->stats.faces ; pp++ ) {
-		    if ( PointInPolygon( v-1, shadow->verts, shadow->faces[pp].Node, shadow->faces[pp].nodes ) ) {
-		    	inside += 1;
-		    	break;
-		    }
-		}
-	    }
-	    if ( inside<=n ) {	// Add face
-		//printf("Adding shadow face\n");
-		// Reusing (pointing to) nodes from original obj
-		si = shadow->stats.faces;
-		memcpy( &(shadow->faces[si]), &(obj->faces[i]), sizeof(Face) );
-/*
-		shadow->faces[si].nodes = obj->faces[i].nodes; */
-		for( n=0 ; n<shadow->faces[si].nodes ; n++ )
-			shadow->faces[si].Node[n][2] = 1;
-	
-		shadow->stats.faces += 1;
-	    }
-	    else printf("### FACE NOT ADDED\n");
-    }		
-    return shadow;
+	shadow->verts[i][zcoord] = zmin;
+   
+   // alloc counters
+   shadow->counts.verts = Malloc(shadow->stats.verts, sizeof(int));
+   shadow->counts.norms = Malloc(shadow->stats.norms, sizeof(int));
+   shadow->order.verts = Malloc(shadow->stats.verts, sizeof(int));
+   shadow->order.norms = Malloc(shadow->stats.norms, sizeof(int));
+   
+   // Add faces
+   shadow->stats.faces = shadow->stats.verts - 1;
+   shadow->faces = Malloc(shadow->stats.faces, sizeof(Face));   
+   for( i=0 ; i<shadow->stats.faces ; i++ ) {
+       shadow->faces[i].nodes = 3;   // shadow is build using triangles.
+       shadow->faces[i].Node = Malloc(3,sizeof(FaceNode));
+       shadow->faces[i].Node[0][0] = i+1;
+       shadow->faces[i].Node[0][1] = 2;         // Light texture poine
+       shadow->faces[i].Node[0][2] = 1;
+       shadow->faces[i].Node[1][0] = i+2;
+       shadow->faces[i].Node[1][1] = 2;         // Light texture point
+       shadow->faces[i].Node[1][2] = 1;
+       // 3rd face node is always central vertex
+       shadow->faces[i].Node[2][0] = shadow->stats.verts;
+       shadow->faces[i].Node[2][1] = 1;         // Dark texture point
+       shadow->faces[i].Node[2][2] = 1;
+   }
+   shadow->faces[i-1].Node[1][0] = 1;   // Last polygon uses first vertex 
+   if ( Verbose ) printf("Shadow done\n");
+   return shadow;
 }
+
+
+ObjFile *CreateShadowObj_Projection(ObjFile *obj) {
+    // future version using vertical projection.
+    // Under development...
+    int ycoord = 2;
+    int zcoord = 1;
+    if (Verbose) fprintf(stderr,"Creating shadow\n");
+  
+    int i, si;	// face indexs
+    ObjFile *shadow = Malloc(1,sizeof(ObjFile));
+
+    shadow->stats.verts = 0;
+    shadow->verts = Malloc(obj->stats.verts, sizeof(Vert));
+
+    shadow->stats.faces = 0;
+    shadow->stats.texts = 0;
+
+        // Add one normal
+        shadow->stats.norms = 1;	// Only one norm, facing up.
+	shadow->norms = Malloc(1, sizeof(Norm));
+	shadow->norms[0][0] = 0.;
+	shadow->norms[0][ycoord] = 0.;
+	shadow->norms[0][zcoord] = 1.;	// Up vector
+
+	shadow->texts = 0;
+	shadow->grps = 0 ;
+	shadow->mats = 0;
+	shadow->objs = 0;
+	shadow->libs = 0;
+	shadow->shds = 0;
+
+	shadow->counts.verts = NULL;
+	shadow->counts.norms = NULL;
+	shadow->counts.texts = NULL;
+
+        shadow->order.verts = NULL;
+	shadow->order.texts = NULL;
+	shadow->order.norms = NULL;
+        
+   // Find z min
+   float zmin = MAX_FLOAT;
+   for( i=0 ; i<obj->stats.verts ; i++ )
+	if ( obj->verts[i][zcoord]<zmin )
+		zmin = obj->verts[i][zcoord];
+
+   // Find leftest vertex
+   float xmin = MAX_FLOAT;
+   float ymin = MAX_FLOAT;
+   int   vmin = -1;
+   for( i=0 ; i<obj->stats.verts ; i++ )
+	if ( obj->verts[i][0]<xmin ) {
+		xmin = obj->verts[i][0];
+		ymin = obj->verts[i][ycoord];
+                vmin = i;
+	}
+   
+   // Find surrounding convex polygon
+   
+   float xp = xmin;
+   float yp = ymin;
+   int vp = vmin;
+
+   float sum_x = 0.;
+   float sum_y = 0.;
+   // Looking from left to right
+   while (1) {
+	double mmax = -MAX_FLOAT;
+	double ymax = -MAX_FLOAT;
+        double xmax = -MAX_FLOAT;
+        // Find next edge, with greatest slope
+        // Edge must contain current vertex
+        for( int fi=0 ; fi<obj->stats.faces ; fi++ ) {
+            int ni, vidx;
+            for( ni=0 ; ni<obj->faces[fi].nodes ; ni++ ) {
+                vidx = obj->faces[ni].Node[ni][0];
+                if ( vp==vidx ) break;   // vertex_idx matches
+                if ( xp==obj->verts[vidx][0] && yp==obj->verts[vidx][ycoord] )
+                    break;      // vertex position matches
+            }
+            if ( ni>=obj->faces[fi].nodes ) continue;
+            // Match. Face[fi] contains current vertex in node ni.
+            // Since faces are convex, analyze only edges to adjacent vertexes.
+            int ei;
+            ei = ni-1;
+            if ( ei<0 ) ei=obj->faces[fi].nodes-1;
+            vidx = obj->faces[ni].Node[ei][0];
+            if ( vp!=vidx ) {   // Avoid dupplicated vertexes
+                float x = obj->verts[i][0];
+                float y = obj->verts[i][ycoord];
+                
+            }
+        }
+        
+        
+        // old part
+	for( i=0 ; i<obj->stats.verts ; i++ ) {
+	    float x = obj->verts[i][0];
+	    float y = obj->verts[i][ycoord];
+	    if ( x<xp ) continue;
+            if ( x==xp ) {      // Vertical
+                if ( y<=yp ) continue;
+                mmax = MAX_FLOAT;
+		xmax = x;
+		ymax = y;
+                break;
+            }
+	    double m = (y-yp)/(x-xp);
+	    if ( m>mmax ) {
+		mmax = m;
+		xmax = x;
+		ymax = y;
+	    }
+	}
+        printf("mmax: %f\n",mmax);
+	if ( mmax<=-MAX_FLOAT/2. ) break;
+	// new border vertex found
+	xp = xmax;
+	yp = ymax;
+        sum_x += xmax;
+        sum_y += ymax;
+	si = shadow->stats.verts;
+	shadow->verts[si][0] = xp;
+	shadow->verts[si][ycoord] = yp;
+	shadow->stats.verts = si+1;
+   }
+   /*
+   // Looking from right to left
+   while (1) {
+	double mmax = -MAX_FLOAT;
+	ymax = xmax = -MAX_FLOAT;
+        // Find next vertex, with largest slope
+	for( i=0 ; i<obj->stats.verts ; i++ ) {
+	    float x = obj->verts[i][0];
+	    float y = obj->verts[i][ycoord];
+	    if ( x>xp ) continue;
+            if ( x==xp ) {      // Vertical
+                if ( y>=yp ) continue;
+                mmax = MAX_FLOAT;
+		xmax = x;
+		ymax = y;
+                break;
+            }
+	    double m = (y-yp)/(x-xp);
+	    if ( m>mmax ) {
+		mmax = m;
+		xmax = x;
+		ymax = y;
+	    }
+	}
+        printf("mmax: %f\n",mmax);
+	if ( mmax<=-MAX_FLOAT/2. ) break;
+	// new border vertex found
+	xp = xmax;
+	yp = ymax;
+        sum_x += xmax;
+        sum_y += ymax;
+	si = shadow->stats.verts;
+	shadow->verts[si][0] = xp;
+	shadow->verts[si][ycoord] = yp;
+	shadow->stats.verts = si+1;
+   }
+   */
+   
+   if ( shadow->stats.verts<3 ) {
+       fprintf(stderr,"Invalid shadow\n");
+       return shadow;
+   }
+   
+   // Add central vertex
+   float xmed = sum_x / shadow->stats.verts;
+   float ymed = sum_y / shadow->stats.verts;
+   si = shadow->stats.verts;
+   shadow->verts[si][0] = xmed;
+   shadow->verts[si][ycoord] = ymed;
+   shadow->stats.verts = si+1;
+   printf("Shadow has %d vertexes\n", shadow->stats.verts);
+   
+   // smachdown zz coords to zmin
+   for( i=0 ; i<shadow->stats.verts ; i++ )
+	shadow->verts[i][zcoord] = zmin;
+   
+   // alloc counters
+   shadow->counts.verts = Malloc(shadow->stats.verts, sizeof(int));
+   shadow->counts.norms = Malloc(shadow->stats.norms, sizeof(int));
+   shadow->order.verts = Malloc(shadow->stats.verts, sizeof(int));
+   shadow->order.norms = Malloc(shadow->stats.norms, sizeof(int));
+   
+   // Add faces
+   shadow->stats.faces = shadow->stats.verts - 1;
+   shadow->faces = Malloc(shadow->stats.faces, sizeof(Face));   
+   for( i=0 ; i<shadow->stats.faces ; i++ ) {
+       shadow->faces[i].nodes = 3;   // shadow is build using triangles.
+       shadow->faces[i].Node = Malloc(3,sizeof(FaceNode));
+       shadow->faces[i].Node[0][0] = i+1;
+       shadow->faces[i].Node[0][1] = NULL_IDX;  // Shadow does not use texture
+       shadow->faces[i].Node[0][2] = 1;
+       shadow->faces[i].Node[1][0] = i+2;
+       shadow->faces[i].Node[1][1] = NULL_IDX;  // Shadow does not use texture
+       shadow->faces[i].Node[1][2] = 1;
+       shadow->faces[i].Node[2][0] = shadow->stats.verts;
+       shadow->faces[i].Node[2][1] = NULL_IDX;  // Shadow does not use texture
+       shadow->faces[i].Node[2][2] = 1;
+   }
+   shadow->faces[i-1].Node[1][0] = 1;   // Last polygon uses first vertex 
+   if ( Verbose ) printf("Shadow done\n");
+   return shadow;
+}
+
 
 void AllocObjFile(ObjFile *obj) {
 	assert(obj!=NULL);
@@ -778,17 +1040,21 @@ void SaveObjFile(char *fname, ObjFile *obj) {
 		    fprintf(stderr,"Cannot open output file '%s'\n", fname);
 		    exit(5);
 		}
-	        //printf("    abriu\n");
+	        printf("    abriu\n");
 	}
 	fprintf(fout,"# file written by ObjTool\n\n");
         
-        // Save Vertexes
-	for( i=0 ; i<obj->stats.verts ; i++ ) 
+        // Save VertexesUseMtl: 0
+
+        assert(obj->counts.verts);
+	for( i=0 ; i<obj->stats.verts ; i++ ) {
+            if ( Verbose>30 ) printf("vertex %d-%d\n", i, nv);
 	    if ( obj->counts.verts[i] > 0 ) {
 		fprintf(fout,"v %f %f %f\n", obj->verts[i][0],obj->verts[i][1],obj->verts[i][2]);
 		nv++;
 	    }
-	//printf("    gravou verts\n");
+        }
+	if ( Verbose>10 ) printf("    %d vertexes saved\n", nv);
 	
 	// Save Texture Coords
 	for( i=0 ; i<obj->stats.texts ; i++ ) 
@@ -796,7 +1062,7 @@ void SaveObjFile(char *fname, ObjFile *obj) {
 		fprintf(fout,"vt %f %f\n", obj->texts[i][0],obj->texts[i][1]);
 		nt++;
 	    }
-	//printf("    gravou text verts\n");
+	if ( Verbose>10 ) printf("    %d texture vertexes saved\n", nt);
 	
 	// Save Norms
 	for( i=0 ; i<obj->stats.norms ; i++ ) 
@@ -804,22 +1070,19 @@ void SaveObjFile(char *fname, ObjFile *obj) {
 		fprintf(fout,"vn %f %f %f\n", obj->norms[i][0],obj->norms[i][1],obj->norms[i][2]);
 		nn++;
 	    }
-	printf("    gravou norms\n");
+	if ( Verbose>10 ) printf("    %d normals saved\n", nn);
 	
 	// Save faces
 	int gidx=0,oidx=0,midx=0,lidx=0;
+        int saved_faces = 0;
 	for( i=0 ; i<obj->stats.faces ; i++ ) {
 	    int n;
-            printf("  Working on face %d\n",i);
+            if ( Verbose>12) printf("  Working on face %d\n",i);
 	    if ( lidx<obj->stats.libs && i>=obj->libs[lidx].line ) {
-                printf(" face %d, lidx %d\n", i, lidx);
                 while( i<obj->stats.faces && obj->faces[i].nodes <= 0 ) i++;
-                printf("   face %d, lidx %d\n", i, lidx);
                 while( lidx<obj->stats.libs && i>=obj->libs[lidx].line ) lidx++;
-                printf("     face %d, lidx %d\n", i, lidx);
                 fprintf(fout,"mtllib %s\n",obj->libs[lidx-1].name);
 	    }
-	    printf(" libs done\n");
 	    if ( oidx<obj->stats.objs && i>=obj->objs[oidx].line ) {
                 while( i<obj->stats.faces && obj->faces[i].nodes <= 0 ) i++;
                 while( oidx<obj->stats.objs && i>=obj->objs[oidx].line ) oidx++;
@@ -837,7 +1100,8 @@ void SaveObjFile(char *fname, ObjFile *obj) {
 	    }
             if ( i>=obj->stats.faces ) break;
 	    if ( obj->faces[i].nodes <= 0 ) continue;  // face erased
-	    fprintf(fout,"f "); 
+	    fprintf(fout,"f ");
+            saved_faces += 1;
 	    for( n=0 ; n<obj->faces[i].nodes ; n++ ) {
 		fprintf(fout,"%d", VertIndex(obj,obj->faces[i].Node[n][0],nv) );
 		fprintf(fout,"/");
@@ -853,6 +1117,8 @@ void SaveObjFile(char *fname, ObjFile *obj) {
 	    }
 	    fprintf(fout,"\n");
 	}
+	
+	if ( Verbose>9 ) printf("    %d faces saved\n", saved_faces);
 	if ( fout!=stdout ) fclose(fout); 
 }
 
@@ -879,7 +1145,7 @@ void ExplodeOutputFile(char *OutputFile, ObjFile *obj) {
 
         
 	do {
-printf("    Adding face %d\n", iface);
+            // printf("    Adding face %d\n", iface);
             // Create new obj_part
 	    ObjFile *obj_part;
 	    obj_part = Malloc(1,sizeof(ObjFile));
@@ -924,7 +1190,7 @@ printf("    Adding face %d\n", iface);
 
 	    snprintf(fname,MAX_FILE_NAME_LEN,"%s_%u_%d_%d_%d.obj", OutputFile, fnum, imat, iobj, igrp);
 printf("  Saving PartFile '%s'\n",fname); 
-printf("    iface:%d\n", iface);
+//printf("    iface:%d\n", iface);
 	    SaveObjFile(fname, obj_part );
 
 	    Free(obj_part);
@@ -960,18 +1226,23 @@ void FreeObjFile(ObjFile *obj) {
     Free(obj->objs);
     Free(obj->shds);
     Free(obj->libs);
+ printf("free counts\n");   
     Free(obj->counts.verts);
     Free(obj->counts.norms);
     Free(obj->counts.texts);
+ printf("free order\n");  
     Free(obj->order.verts);
     Free(obj->order.texts);
     Free(obj->order.norms);
+    printf("free end\n");
 }
 
 
 void SetUseCounters(ObjFile *obj) {
 	// Counts uses of each vertex, norm and texture coord.
 	// results are stored in obj->counts structure
+        assert(obj);
+        assert(obj->counts.verts);
 	int i;
 	for( i=0 ; i<obj->stats.verts ; i++ )
 	    obj->counts.verts[i] = 0;
@@ -1078,13 +1349,16 @@ void CleanFaces(ObjFile *obj) {
 	    }
 	    // Remove face if it includes inexistent vertexs.
 	    // Maybe try other options in the future:
-	    //     - keep faces that have at least on selected vertex
+	    //     - Keep faces that have at least three selected vertexes, removing unselected vertexes.
+	    //     - Keep faces with all vertexes if they have at least one selected vertex. 
 	    //     - Adjust position of unselected vertexes so that they go to the border of the selected area.
+	    //       This is similar to the implemented SolidCut option.
+	    //       But SolidCut works only on vertexes and does not know any thing about faces.
 	    for( n=0 ; n<obj->faces[i].nodes ; n++ ) {
 		int v = obj->faces[i].Node[n][0];
 		if ( v<1 || v>obj->stats.verts  || obj->counts.verts[v-1]<0 ) {
 		    obj->faces[i].nodes = 0;
-		    if ( Verbose>=2 )
+		    if ( Verbose>=3 )
 			fprintf(stderr,"face %d removed.v=%d,count=%d\n", i, v, obj->counts.verts[v-1] );
 		    break;
 		}
@@ -1548,6 +1822,8 @@ int main(int argc, char **argv) {
 	if ( ShadowOutputFile ) {
 printf("shadow\n");
 			ObjFile *Shadow = CreateShadowObj(&obj);
+                        SetUseCounters(Shadow);
+                        SetIndexs(Shadow);
 PrintObjStats(&(Shadow->stats));
 			SaveObjFile(ShadowOutputFile, Shadow);
 printf("saved\n");
