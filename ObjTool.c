@@ -388,7 +388,7 @@ int VerticalCrossSegment(Vert *p, Vert v1, Vert v2) {
 }
 
 int PointInPolygon(int v, Vert *verts, FaceNode *node, int n) {
-	// Test if vertex p is outside polygon vert[]
+	// Test if vertex p is outside 2D polygon vert[]
 	Vert *p = verts+v;
 	int cross = 0; 
 	if ( n<3 ) return cross;	// polygon must be closed	
@@ -506,8 +506,8 @@ ObjFile *CreateShadowObj(ObjFile *obj) {
 
     shadow->stats.faces = 0;
 
-        // Add one normal
-        shadow->stats.norms = 1;	// Only one norm, facing up.
+    // Add one normal
+    shadow->stats.norms = 1;	// Only one norm, facing up.
 	shadow->norms = Malloc(shadow->stats.norms, sizeof(Norm));
 	shadow->norms[0][0] = 0.;
 	shadow->norms[0][ycoord] = 0.;
@@ -521,17 +521,27 @@ ObjFile *CreateShadowObj(ObjFile *obj) {
 	shadow->texts[1][0] = 0.9;
 	shadow->texts[1][1] = 0.9;
         
+    // Add one MtlLib
+    shadow->stats.libs = 1;
+	shadow->libs = Malloc(shadow->stats.libs, sizeof(ObjGroup));
+    shadow->libs[0].line = 0;       // before all faces
+    shadow->libs[0].name = "shadow.mtl";
+    
+    // Add one Material
+    shadow->stats.mats = 1;
+	shadow->mats = Malloc(shadow->stats.mats, sizeof(ObjGroup));
+    shadow->mats[0].line = 0;       // before all faces
+    shadow->mats[0].name = "shadow";
+    
 	shadow->grps = NULL;
-	shadow->mats = NULL;
 	shadow->objs = NULL;
-	shadow->libs = NULL;
 	shadow->shds = NULL;
 
 	shadow->counts.verts = NULL;
 	shadow->counts.norms = NULL;
 	shadow->counts.texts = NULL;
 
-        shadow->order.verts = NULL;
+    shadow->order.verts = NULL;
 	shadow->order.texts = NULL;
 	shadow->order.norms = NULL;
         
@@ -648,8 +658,10 @@ ObjFile *CreateShadowObj(ObjFile *obj) {
    // alloc counters
    shadow->counts.verts = Malloc(shadow->stats.verts, sizeof(int));
    shadow->counts.norms = Malloc(shadow->stats.norms, sizeof(int));
+   shadow->counts.texts = Malloc(shadow->stats.texts, sizeof(int));
    shadow->order.verts = Malloc(shadow->stats.verts, sizeof(int));
    shadow->order.norms = Malloc(shadow->stats.norms, sizeof(int));
+   shadow->order.texts = Malloc(shadow->stats.texts, sizeof(int));
    
    // Add faces
    shadow->stats.faces = shadow->stats.verts - 1;
