@@ -16,6 +16,8 @@
 #include <math.h>
 #include <assert.h>
 
+#include "linmath.h"
+
 #define PI M_PI
 
 #define MAX_LINE_LEN (5880)
@@ -59,6 +61,9 @@ typedef struct UseCountStruct {
 typedef int FaceNode[3];	// VeterxIdx TextureCoordIdx NormalIdx
 
 typedef float Vert[3];		// x y z
+
+typedef float Vec2[2];
+typedef float Vec3[3];
 //typedef FaceNode *Face;
 
 typedef struct FaceStruct {
@@ -402,21 +407,79 @@ int PointInPolygon(int v, Vert *verts, FaceNode *node, int n) {
 	return cross % 2;
 }
 
+double SegmentsIntersection(Vec2 p1, Vec2 p2, Vec2 q1, Vec2 q2) {
+
+    vec2 pmin, pmax, qmin, qmax;
+    int i;
+    for( i=0 ; i<2 ; i++ ) {
+        if ( p1[i]<p2[i] ) {
+            pmin[i] = p1[i];
+            pmax[i] = p2[i];
+        } else {
+            pmin[i] = p2[i];
+            pmax[i] = p1[i];
+        } 
+        if ( q1[i]<q2[i] ) {
+            qmin[i] = q1[i];
+            qmax[i] = q2[i];
+        } else {
+            qmin[i] = q2[i];
+            qmax[i] = q1[i];
+        }
+        if ( pmax[i]<qmin[i] ) return -1.;  // Bounding boxes non-overlapping
+        if ( qmax[i]<pmin[i] ) return -1.;
+    }
+        
+    vec2 p, q;
+    vec2_subed(p,p2,p1);
+    vec2_subed(q,q2,q1);
+    
+    vec2 d1;
+    vec2_subed(d1,q1,p1);
+    double t = vec2_cross(d1,q);
+    double pq = vec2_cross(p,q);
+    if ( abs(pq)<1e-10 ) {          // parallel segments
+        if ( abs(t)<1e-10 )         //   collinear segments
+            return 0;
+        return -1.;                 //   non-intersecting
+    }
+    if ( t>=0 && t<=1. )            // intersecting
+        return t;
+    return -1;                      // lines intersecting but outside segments.
+    
+}
+
 double FindClosestIntersection(float x1, float y1,
                                float x2,float y2, 
                                ObjFile *obj, 
                                int *nfi, int *nni) {
+    int ycoord = 2; // must be the same as the one defined at CreateShadowObj
     // finds edge from obj that crosses segment (x1,y1)-(x2,y2) nearest to (x1,y1)
+    vec2 p1 = { x1, y1 };
+    vec2 p2 = { x2, y2 };
     double dist = MAX_FLOAT;
     int fi, ni;
-    double dy = y2-y1;
-    double dx = x2-x1;
+    //double dy = y2-y1;
+    //double dx = x2-x1;
     
     for( fi=0 ; fi<obj->stats.faces ; fi++ ) {
         for( ni=0 ; ni<obj->faces[fi].nodes ; ni++ ) {
-            
+            vec2 q1, q2;
+            q1[0] = obj->faces[fi].Node[ni][0];
+            q1[1] = obj->faces[fi].Node[ni][ycoord];
+            int next = ni+1;
+            if ( next>=obj->faces[fi].nodes ) next = 0;
+            q2[0] = obj->faces[fi].Node[next][0];
+            q2[1] = obj->faces[fi].Node[next][ycoord];
+            double idist = SegmentsIntersection(p1,p2,q1,q2);
+            if ( idist>0 && idist<dist ) {
+                dist = idist;
+                *nfi = fi;
+                *nni = ni;
+            }
         }
     }
+    return dist;
 }
 
 ObjFile *CreateShadowObj_v1(ObjFile *obj) {
@@ -532,13 +595,13 @@ ObjFile *CreateShadowObj(ObjFile *obj) {
 	shadow->norms[0][ycoord] = 0.;
 	shadow->norms[0][zcoord] = 1.;	// Up vector
 
-        // Add two texture coords
+    // Add two texture coords
 	shadow->stats.texts = 2;
 	shadow->texts = Malloc(shadow->stats.texts, sizeof(Text));
-	shadow->texts[0][0] = 0.;
-	shadow->texts[0][1] = 0.;
-	shadow->texts[1][0] = 0.9;
-	shadow->texts[1][1] = 0.9;
+	shadow->texts[0][0] = 0.01;
+	shadow->texts[0][1] = 0.01;
+	shadow->texts[1][0] = 0.91;
+	shadow->texts[1][1] = 0.91;
         
     // Add one MtlLib
     shadow->stats.libs = 1;
@@ -777,7 +840,7 @@ ObjFile *CreateShadowObj_Projection(ObjFile *obj) {
    }
    printf("starting vertex %d, %f, %f\n", vp,xp,yp);
    
-   // Looking from left to right
+   // Looking for boundary
    while (1) {
 	double amax = -MAX_FLOAT;
 	double ymax = -MAX_FLOAT;
@@ -846,11 +909,11 @@ ObjFile *CreateShadowObj_Projection(ObjFile *obj) {
         // Next vertex will be (xmax,ymax) only if edge is not intersected
         // Must test intersection with all edges in every face.
         int nfi, nni;
-        double dist = -1.; //FindClosestIntersection(xp,yp,xmax,ymax,&nfi,&nni);
-        if ( dist>0. ) {
-            double len = sqrt(dx*dx+dy*dy);
-            xp += dx*dist/len;
-            yp += dy*dist/len;
+        double tdist = FindClosestIntersection(xp,yp,xmax,ymax,obj,&nfi,&nni);
+        if ( tdist>0. ) {
+            //double len = sqrt(dx*dx+dy*dy);
+            xp += dx*tdist;
+            yp += dy*tdist;
             vp = -1;    // Unexistant/new vertex
         }
         else {  // no intersections found
