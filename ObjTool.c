@@ -461,7 +461,6 @@ double FindClosestIntersection(float x1, float y1,
     int fi, ni;
     //double dy = y2-y1;
     //double dx = x2-x1;
-    
     for( fi=0 ; fi<obj->stats.faces ; fi++ ) {
         for( ni=0 ; ni<obj->faces[fi].nodes ; ni++ ) {
             vec2 q1, q2;
@@ -812,22 +811,39 @@ ObjFile *CreateShadowObj_Projection(ObjFile *obj) {
 	if ( obj->verts[i][zcoord]<zmin )
 		zmin = obj->verts[i][zcoord];
 
+   unsigned char flags[obj->stats.verts];
+    // Reset all flags;
+    for( i=0 ; i<obj->stats.verts ; i++ )
+        flags[i] = 0;
+
    // Find leftest vertex
    float xmin = MAX_FLOAT;
    float ymin = MAX_FLOAT;
    int   vmin = -1;
-   for( i=0 ; i<obj->stats.verts ; i++ )
+   int   fmin = -1;
+   int   nmin = -1;
+
+   int fi, ni;
+   for( fi=0 ; fi<obj->stats.faces ; fi++ )
+   for( ni=0 ; ni<obj->faces[fi].nodes ; ni++ ) {
+	int i = obj->faces[fi].Node[ni][0];
 	if ( obj->verts[i][0]<xmin ) {
 		xmin = obj->verts[i][0];
 		ymin = obj->verts[i][ycoord];
-                vmin = i;
+		vmin = i;
+		fmin = fi;
+		nmin = ni;
 	}
+   }
    
    // Find surrounding convex polygon
+   // cursor variables. Register current point.
    float xp = xmin;
    float yp = ymin;
    double ap = PI/2.;
    int vp = vmin;
+   int fp = fmin;
+   int np = nmin;
 
    float sum_x = xp;
    float sum_y = yp;
@@ -837,7 +853,9 @@ ObjFile *CreateShadowObj_Projection(ObjFile *obj) {
 	shadow->verts[si][0] = xp;
 	shadow->verts[si][ycoord] = yp;
 	shadow->stats.verts = si+1;
+	
    }
+   flags[vp] = 1;
    printf("starting vertex %d, %f, %f\n", vp,xp,yp);
    
    // Looking for boundary
@@ -846,6 +864,10 @@ ObjFile *CreateShadowObj_Projection(ObjFile *obj) {
 	double ymax = -MAX_FLOAT;
         double xmax = -MAX_FLOAT;
         int    vmax = -1;
+	int    fmax = -1;
+	int    nmax = -1;
+
+	if ( vp>=0 ) {
         // Find next edge, with greatest slope
         // Edge must contain current vertex
         for( int fi=0 ; fi<obj->stats.faces ; fi++ ) {
@@ -857,7 +879,7 @@ ObjFile *CreateShadowObj_Projection(ObjFile *obj) {
                 if ( xp==obj->verts[vidx][0] && yp==obj->verts[vidx][ycoord] )
                     break;      // vertex position matches
             }
-            if ( ni>=obj->faces[fi].nodes ) continue;
+            if ( ni>=obj->faces[fi].nodes ) continue; // No matches in this face. Next face.
             //printf(" ## face match %d, node %d\n", fi, ni);
             // Match. Face[fi] contains current vertex in node ni.
             // Since faces are convex, analyze only edges to adjacent vertexes.
@@ -877,6 +899,8 @@ ObjFile *CreateShadowObj_Projection(ObjFile *obj) {
                         xmax = x;
                         ymax = y;
                         vmax = vidx;
+			fmax = fi;
+			nmax = ni;
                     }       
                 }
             }
@@ -895,10 +919,17 @@ ObjFile *CreateShadowObj_Projection(ObjFile *obj) {
                         xmax = x;
                         ymax = y;
                         vmax = vidx;
+			fmax = fi;
+			nmax = ni;
                     }       
                 }
             }
         } // for all faces
+
+	} // if ( vp>=0 )
+	else {
+// usa FindClosestIntersection
+	}
         if ( amax<-MAX_FLOAT/2. ) break;
         if ( vmax==vmin ) break;    // round complete
         // best edge got
