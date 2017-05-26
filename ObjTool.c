@@ -411,6 +411,8 @@ double SegmentsIntersection(Vec2 p1, Vec2 p2, Vec2 q1, Vec2 q2) {
 
     vec2 pmin, pmax, qmin, qmax;
     int i;
+
+    //printf("interseting (%f,%f) (%f,%f) - (%f,%f) (%f,%f)\n",p1[0],p1[1],p2[0],p2[1],q1[0],q1[1],q2[0],q2[1]);
     for( i=0 ; i<2 ; i++ ) {
         if ( p1[i]<p2[i] ) {
             pmin[i] = p1[i];
@@ -429,21 +431,26 @@ double SegmentsIntersection(Vec2 p1, Vec2 p2, Vec2 q1, Vec2 q2) {
         if ( pmax[i]<qmin[i] ) return -1.;  // Bounding boxes non-overlapping
         if ( qmax[i]<pmin[i] ) return -1.;
     }
-        
+    //printf("bb interseted\n");       
     vec2 p, q;
     vec2_subed(p,p2,p1);
     vec2_subed(q,q2,q1);
     
     vec2 d1;
     vec2_subed(d1,q1,p1);
-    double t = vec2_cross(d1,q);
+    double u0 = vec2_cross(d1,p);
     double pq = vec2_cross(p,q);
+    
+    //printf("     u0=%f, pq=%f\n",u0,pq);
     if ( abs(pq)<1e-10 ) {          // parallel segments
-        if ( abs(t)<1e-10 )         //   collinear segments
+        if ( abs(u0)<1e-10 )         //   collinear segments
             return 0;
         return -1.;                 //   non-intersecting
     }
-    if ( t>=0 && t<=1. )            // intersecting
+    
+    double t = vec2_cross(d1,q)/pq;
+    double u = u0/pq;
+    if ( t>=0 && t<=1. && u>=0 && u<=1. )            // intersecting
         return t;
     return -1;                      // lines intersecting but outside segments.
     
@@ -464,20 +471,24 @@ double FindClosestIntersection(float x1, float y1,
     for( fi=0 ; fi<obj->stats.faces ; fi++ ) {
         for( ni=0 ; ni<obj->faces[fi].nodes ; ni++ ) {
             vec2 q1, q2;
-            q1[0] = obj->faces[fi].Node[ni][0];
-            q1[1] = obj->faces[fi].Node[ni][ycoord];
+            int vi = obj->faces[fi].Node[ni][0]-1;
+            q1[0] = obj->verts[vi][0];
+            q1[1] = obj->verts[vi][ycoord];
             int next = ni+1;
             if ( next>=obj->faces[fi].nodes ) next = 0;
-            q2[0] = obj->faces[fi].Node[next][0];
-            q2[1] = obj->faces[fi].Node[next][ycoord];
+            vi = obj->faces[fi].Node[next][0]-1;
+            q2[0] = obj->verts[vi][0];
+            q2[1] = obj->verts[vi][ycoord];
             double idist = SegmentsIntersection(p1,p2,q1,q2);
             if ( idist>0 && idist<dist ) {
+                printf(" intersected, d=%f\n",idist);
                 dist = idist;
                 *nfi = fi;
                 *nni = ni;
             }
         }
     }
+    if ( dist>MAX_FLOAT/2. ) return -1.;    // No intersection found
     return dist;
 }
 
@@ -751,7 +762,7 @@ ObjFile *CreateShadowObj(ObjFile *obj) {
        shadow->faces[i].nodes = 3;   // shadow is build using triangles.
        shadow->faces[i].Node = Malloc(3,sizeof(FaceNode));
        shadow->faces[i].Node[0][0] = i+1;
-       shadow->faces[i].Node[0][1] = 2;         // Light texture poine
+       shadow->faces[i].Node[0][1] = 2;         // Light texture point
        shadow->faces[i].Node[0][2] = 1;
        shadow->faces[i].Node[1][0] = i+2;
        shadow->faces[i].Node[1][1] = 2;         // Light texture point
@@ -773,15 +784,15 @@ ObjFile *CreateShadowObj_Projection(ObjFile *obj) {
     int ycoord = 2;
     int zcoord = 1;
     if (Verbose) fprintf(stderr,"Creating shadow\n");
+    
   
     int i, si;	// face indexs
     ObjFile *shadow = Malloc(1,sizeof(ObjFile));
 
     shadow->stats.verts = 0;
-    shadow->verts = Malloc(obj->stats.verts, sizeof(Vert));
+    shadow->verts = Malloc(obj->stats.verts+1, sizeof(Vert));
 
     shadow->stats.faces = 0;
-    shadow->stats.texts = 0;
 
         // Add one normal
         shadow->stats.norms = 1;	// Only one norm, facing up.
@@ -789,19 +800,36 @@ ObjFile *CreateShadowObj_Projection(ObjFile *obj) {
 	shadow->norms[0][0] = 0.;
 	shadow->norms[0][ycoord] = 0.;
 	shadow->norms[0][zcoord] = 1.;	// Up vector
+	
+	    // Add two texture coords
+	shadow->stats.texts = 2;
+	shadow->texts = Malloc(shadow->stats.texts, sizeof(Text));
+	shadow->texts[0][0] = 0.01;
+	shadow->texts[0][1] = 0.01;
+	shadow->texts[1][0] = 0.91;
+	shadow->texts[1][1] = 0.91;
+    
+        // Add one MtlLib
+    shadow->stats.libs = 1;
+	shadow->libs = Malloc(shadow->stats.libs, sizeof(ObjGroup));
+    shadow->libs[0].line = 0;       // before all faces
+    shadow->libs[0].name = "shadow.mtl";
+    
+    // Add one Material
+    shadow->stats.mats = 1;
+	shadow->mats = Malloc(shadow->stats.mats, sizeof(ObjGroup));
+    shadow->mats[0].line = 0;       // before all faces
+    shadow->mats[0].name = "shadow";
 
-	shadow->texts = 0;
-	shadow->grps = 0 ;
-	shadow->mats = 0;
-	shadow->objs = 0;
-	shadow->libs = 0;
-	shadow->shds = 0;
+	shadow->grps = NULL;
+	shadow->objs = NULL;
+	shadow->shds = NULL;
 
 	shadow->counts.verts = NULL;
 	shadow->counts.norms = NULL;
 	shadow->counts.texts = NULL;
 
-        shadow->order.verts = NULL;
+    shadow->order.verts = NULL;
 	shadow->order.texts = NULL;
 	shadow->order.norms = NULL;
         
@@ -826,7 +854,7 @@ ObjFile *CreateShadowObj_Projection(ObjFile *obj) {
    int fi, ni;
    for( fi=0 ; fi<obj->stats.faces ; fi++ )
    for( ni=0 ; ni<obj->faces[fi].nodes ; ni++ ) {
-	int i = obj->faces[fi].Node[ni][0];
+	int i = obj->faces[fi].Node[ni][0]-1;
 	if ( obj->verts[i][0]<xmin ) {
 		xmin = obj->verts[i][0];
 		ymin = obj->verts[i][ycoord];
@@ -855,7 +883,7 @@ ObjFile *CreateShadowObj_Projection(ObjFile *obj) {
 	shadow->stats.verts = si+1;
 	
    }
-   flags[vp] = 1;
+   if ( vp>=0 ) flags[vp] = 1;
    printf("starting vertex %d, %f, %f\n", vp,xp,yp);
    
    // Looking for boundary
@@ -867,100 +895,179 @@ ObjFile *CreateShadowObj_Projection(ObjFile *obj) {
 	int    fmax = -1;
 	int    nmax = -1;
 
-	if ( vp>=0 ) {
+	
         // Find next edge, with greatest slope
         // Edge must contain current vertex
         for( int fi=0 ; fi<obj->stats.faces ; fi++ ) {
             //printf("   testing face %d, nodes %d\n", fi, obj->faces[fi].nodes);
-            int ni, vidx;
+            int ni, vidx=-1;
             for( ni=0 ; ni<obj->faces[fi].nodes ; ni++ ) {
-                vidx = obj->faces[fi].Node[ni][0];
+                vidx = obj->faces[fi].Node[ni][0]-1;
+		assert(vidx>=0);
                 if ( vp==vidx ) break;   // vertex_idx matches
                 if ( xp==obj->verts[vidx][0] && yp==obj->verts[vidx][ycoord] )
                     break;      // vertex position matches
             }
             if ( ni>=obj->faces[fi].nodes ) continue; // No matches in this face. Next face.
-            //printf(" ## face match %d, node %d\n", fi, ni);
+            printf(" # face match %d, node %d vidx %d, ap=%f\n", fi, ni, vidx,ap);
             // Match. Face[fi] contains current vertex in node ni.
             // Since faces are convex, analyze only edges to adjacent vertexes.
-            int ei;
+            int ei1, ei2;
             // previous node
-            ei = ni-1;
-            if ( ei<0 ) ei=obj->faces[fi].nodes-1;
-            vidx = obj->faces[ni].Node[ei][0];
+            ei1 = ni-1;
+            if ( ei1<0 ) ei1=obj->faces[fi].nodes-1;
+            // next node
+            ei2 = ni+1;
+            if ( ei2>=obj->faces[fi].nodes ) ei2 = 0;
+           printf("ei1 ei2 %d %d\n", ei1,ei2); 
+            // previous node
+            vidx = obj->faces[fi].Node[ei1][0]-1;
+	    printf("    previous node, vidx=%d\n",vidx);
+	    assert(vidx<obj->stats.verts);
+	    assert(vidx>=0);
             if ( vp!=vidx ) {   // Avoid duplicated vertexes
                 float x = obj->verts[vidx][0];
                 float y = obj->verts[vidx][ycoord];
                 if ( x!=xp || y!=yp ) {
                     double ang = atan2(y-yp,x-xp);
                     double dang = AngNormalize(ang-ap);
+                    printf(" analysing edge to %f %f, ang %f (%.2f), dang %f (%.2f)\n",x,y,ang,ang*180./PI,dang,dang*180./PI);
                     if ( dang<PI && dang>amax ) {
                         amax = dang;
                         xmax = x;
                         ymax = y;
                         vmax = vidx;
-			fmax = fi;
-			nmax = ni;
+                        fmax = fi;
+                        nmax = ni;
                     }       
                 }
             }
             // next node
-            ei = ni+1;
-            if ( ei>=obj->faces[fi].nodes ) ei = 0;
-            vidx = obj->faces[ni].Node[ei][0];
+            vidx = obj->faces[fi].Node[ei2][0]-1;
+	    assert(vidx>=0);
             if ( vp!=vidx ) {   // Avoid duplicated vertexes
                 float x = obj->verts[vidx][0];
                 float y = obj->verts[vidx][ycoord];
+                //printf(" analysing edge to %f %f\n",x,y);
                 if ( x!=xp || y!=yp ) {
                     double ang = atan2(y-yp,x-xp);
                     double dang = AngNormalize(ang-ap);
+                    printf(" analysing edge to %f %f, ang %f (%.2f), dang %f (%.2f)\n",x,y,ang,ang*180./PI,dang,dang*180./PI);
                     if ( dang<PI && dang>amax ) {
                         amax = dang;
                         xmax = x;
                         ymax = y;
                         vmax = vidx;
-			fmax = fi;
-			nmax = ni;
+                        fmax = fi;
+                        nmax = ni;
                     }       
                 }
             }
         } // for all faces
 
-	} // if ( vp>=0 )
-	else {
-// usa FindClosestIntersection
-	}
-        if ( amax<-MAX_FLOAT/2. ) break;
+        if ( amax<-MAX_FLOAT/2. ) break;  // no edges to follow
         if ( vmax==vmin ) break;    // round complete
+
+        
         // best edge got
         double dx = xmax-xp;
         double dy = ymax-yp;
-        ap = atan2(dy,dx);
-        // Follow this edge.
-        // Next vertex will be (xmax,ymax) only if edge is not intersected
-        // Must test intersection with all edges in every face.
-        int nfi, nni;
-        double tdist = FindClosestIntersection(xp,yp,xmax,ymax,obj,&nfi,&nni);
-        if ( tdist>0. ) {
-            //double len = sqrt(dx*dx+dy*dy);
-            xp += dx*tdist;
-            yp += dy*tdist;
-            vp = -1;    // Unexistant/new vertex
-        }
-        else {  // no intersections found
-            xp = xmax;
-            yp = ymax;
-            vp = vmax;
+        ap = amax = atan2(dy,dx);
+        // assert(vp>=0);
+        
+        
+        printf(" loop exited. amax=%f, vmax=%d, ap= %f (%.2f) len %f\n",amax,vmax,ap,ap*180/PI,sqrt(dx*dx+dy*dy));
+        
+              //////
+       // if (vmax==34682) break;    //DEBUG
+        //////////////////////////////////////////////////////////////
+        
+        
+        
+        double tdist = -1;
+        do {    
+            // Follow this edge.
+            // Next vertex will be vmax(xmax,ymax) only if edge is not intersected
+            // Must test intersection with all edges in every face.
+            int nfi, nni;
+	    printf("  testing intersection with xp,yp - xmax,ymax (%f %f) (%f %f)\n",xp,yp,xmax,ymax);
+            tdist = FindClosestIntersection(xp,yp,xmax,ymax,obj,&nfi,&nni);
+            //printf("    intersection dist: %f\n", tdist);
+            if ( tdist>0. && tdist<1.) {   // Intersection found
+                assert(nfi>=0);
+                assert(nni>=0);
+                printf("    intersection dist: %f\n", tdist);
+                //double len = sqrt(dx*dx+dy*dy);
+                xp += dx*tdist;
+                yp += dy*tdist;
+                vp = -1;    // Unexistant/new vertex
+                fp = nfi;
+                np = nni;
+                
+                sum_x += xp;
+                sum_y = yp;
+    
+                {    // Register vertex
+                    
+                    printf("## got shadow new vertex (%f %f)\n",xp,yp);
+                        int si = shadow->stats.verts;
+                    shadow->verts[si][0] = xp;
+                    shadow->verts[si][ycoord] = yp;
+                    shadow->stats.verts = si+1;
+                    if ( shadow->stats.verts>obj->stats.verts ) {
+                        fprintf(stderr,"Too many vertexes in shadow\n");
+                        return shadow;
+                    }
+                }
+                printf("nfi %d nni %d\n",nfi,nni);
+                fmax = fp;
+                nmax = nni+1;
+                if ( nmax>=obj->faces[fmax].nodes ) nmax = 0;
+                vmax = obj->faces[fmax].Node[nmax][0]-1;
+                xmax = obj->verts[vmax][0];
+                ymax = obj->verts[vmax][ycoord];
+                dx = xmax-xp;
+                dy = ymax-yp;
+                amax = atan2(dy,dx);
+                double dang = AngNormalize(amax-ap);
+                printf("fmax %d nmax %d vmax %d xmax %f ymax %f amax %f ap %f dang %f\n", fmax, nmax, vmax, xmax, ymax, amax,ap,dang);
+                if ( dang<0. ) {
+                    dang += PI;
+                    ap = AngNormalize(ap-PI);
+                    nmax = nni;
+                    vmax = obj->faces[fmax].Node[nmax][0]-1;
+                    xmax = obj->verts[vmax][0];
+                    ymax = obj->verts[vmax][ycoord];
+                    dx = xmax-xp;
+                    dy = ymax-yp;
+                    amax = atan2(dy,dx);
+                    printf(" fmax %d nmax %d vmax %d xmax %f ymax %f amax %f ap %f dang %f\n", fmax, nmax, vmax, xmax, ymax, amax,ap,dang);
+                }
+    
+            }
+        } while ( tdist>0. && tdist<1.);
+        
+        {  // no nore intersections found
+                xp = xmax;
+                yp = ymax;
+                vp = vmax;
+                fp = fmax;
+                np = nmax;
+                ap = amax;
         }
         // Register new vertex
-        printf("got shadow vertex %d %f %f\n",vp,xp,yp);
+        printf("## got shadow MAIN vertex %d (%f %f), ap=%f\n",vp,xp,yp,ap);
         sum_x += xp;
         sum_y += yp;
-	int si = shadow->stats.verts;
-	shadow->verts[si][0] = xp;
-	shadow->verts[si][ycoord] = yp;
-	shadow->stats.verts = si+1;
-   }
+        int si = shadow->stats.verts;
+        shadow->verts[si][0] = xp;
+        shadow->verts[si][ycoord] = yp;
+        shadow->stats.verts = si+1;
+                    if ( shadow->stats.verts>obj->stats.verts ) {
+                        fprintf(stderr,"Too many vertexes in shadow\n");
+                        return shadow;
+                    }
+   }  // while(1)
    
    /*
         // old part
@@ -1032,7 +1139,9 @@ ObjFile *CreateShadowObj_Projection(ObjFile *obj) {
 	shadow->stats.verts = si+1;
    }
    */
-   
+   printf("Shadow add central vertex. normal %f %f %f\n", shadow->norms[0][0], shadow->norms[0][1], shadow->norms[0][2]);
+
+ 
    if ( shadow->stats.verts<3 ) {
        fprintf(stderr,"Invalid shadow\n");
        return shadow;
@@ -1046,17 +1155,19 @@ ObjFile *CreateShadowObj_Projection(ObjFile *obj) {
    shadow->verts[si][ycoord] = ymed;
    shadow->stats.verts = si+1;
    printf("Shadow has %d vertexes\n", shadow->stats.verts);
-   
+ 
    // smachdown zz coords to zmin
    for( i=0 ; i<shadow->stats.verts ; i++ )
 	shadow->verts[i][zcoord] = zmin;
-   
+ 
    // alloc counters
    shadow->counts.verts = Malloc(shadow->stats.verts, sizeof(int));
    shadow->counts.norms = Malloc(shadow->stats.norms, sizeof(int));
    shadow->order.verts = Malloc(shadow->stats.verts, sizeof(int));
    shadow->order.norms = Malloc(shadow->stats.norms, sizeof(int));
-   
+   shadow->counts.texts = Malloc(shadow->stats.texts, sizeof(int));
+   shadow->order.texts = Malloc(shadow->stats.texts, sizeof(int));
+ 
    // Add faces
    shadow->stats.faces = shadow->stats.verts - 1;
    shadow->faces = Malloc(shadow->stats.faces, sizeof(Face));   
@@ -1064,17 +1175,18 @@ ObjFile *CreateShadowObj_Projection(ObjFile *obj) {
        shadow->faces[i].nodes = 3;   // shadow is build using triangles.
        shadow->faces[i].Node = Malloc(3,sizeof(FaceNode));
        shadow->faces[i].Node[0][0] = i+1;
-       shadow->faces[i].Node[0][1] = NULL_IDX;  // Shadow does not use texture
+       shadow->faces[i].Node[0][1] = 2;        // Light texture point
        shadow->faces[i].Node[0][2] = 1;
        shadow->faces[i].Node[1][0] = i+2;
-       shadow->faces[i].Node[1][1] = NULL_IDX;  // Shadow does not use texture
+       shadow->faces[i].Node[1][1] = 2;        // Light texture point
        shadow->faces[i].Node[1][2] = 1;
-       shadow->faces[i].Node[2][0] = shadow->stats.verts;
-       shadow->faces[i].Node[2][1] = NULL_IDX;  // Shadow does not use texture
+       shadow->faces[i].Node[2][0] = shadow->stats.verts; // last vertex
+       shadow->faces[i].Node[2][1] = 1;        // Dark texture point
        shadow->faces[i].Node[2][2] = 1;
    }
    shadow->faces[i-1].Node[1][0] = 1;   // Last polygon uses first vertex 
    if ( Verbose ) printf("Shadow done\n");
+
    return shadow;
 }
 
@@ -1400,10 +1512,13 @@ printf("  Saving PartFile '%s'\n",fname);
 
 void FreeObjFile(ObjFile *obj) {
     int i;
+    printf("Free\n");
     for( i=0 ; i<obj->stats.faces ; i++ )
 	Free(obj->faces[i].Node);
     for( i=0 ; i<obj->stats.grps ; i++ )
 	Free(obj->grps[i].name);
+
+ printf("free lib\n");
 
     for( i=0 ; i<obj->stats.libs ; i++ )
 	Free(obj->libs[i].name);
@@ -1414,9 +1529,17 @@ void FreeObjFile(ObjFile *obj) {
     for( i=0 ; i<obj->stats.objs ; i++ )
 	Free(obj->objs[i].name);
 
+ printf("free faces\n");
+
     Free(obj->faces); 
-    Free(obj->verts); 
+ printf("free verts\n");
+
+    Free(obj->texts); 
+     printf("free texts\n");
+
     Free(obj->norms); 
+ printf("free texts\n");
+
     Free(obj->texts);
     Free(obj->grps);  
     Free(obj->mats);
@@ -2026,6 +2149,7 @@ PrintObjStats(&(Shadow->stats));
 			SaveObjFile(ShadowOutputFile, Shadow);
 printf("saved\n");
 			FreeObjFile(Shadow);
+			printf("Shadow file freed\n");
 	}
 	FreeObjFile(&obj);
 
