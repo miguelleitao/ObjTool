@@ -2142,7 +2142,7 @@ int main(int argc, char **argv) {
 	if ( ShadowOutputFile ) {
 printf("shadow\n");
 			//ObjFile *Shadow = CreateShadowObj(&obj);
-                        ObjFile *Shadow = CreateShadowObj_Projection(&obj);
+                        ObjFile *Shadow = CreateShadowObj(&obj);
                         SetUseCounters(Shadow);
                         SetIndexs(Shadow);
 PrintObjStats(&(Shadow->stats));
