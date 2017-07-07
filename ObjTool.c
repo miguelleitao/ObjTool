@@ -112,6 +112,7 @@ short int Verbose = 0;
 short int info = 0;
 short int Negate = 0;
 short int Explode = 0;
+short int InvertNormals = 0;
 char *SelectGroup[20];
 char *SelectObject[20];
 int SelGroups = 0;
@@ -1767,6 +1768,9 @@ void ProcVerts(ObjFile *obj) {
 		z = obj->norms[i][2];
 		obj->norms[i][1] =  y*CosF(Rotate[0]) - z*SinF(Rotate[0]);
                 obj->norms[i][2] =  y*SinF(Rotate[0]) + z*CosF(Rotate[0]);
+        if ( InvertNormals )
+            for( c=0 ; c<3 ; c++)
+                obj->norms[i][c] *= -1.;
 	}
 }
 
@@ -1793,6 +1797,8 @@ void Usage() {
     fprintf(stderr,"\t\t-rx value	   rotate around xx axis\n");
     fprintf(stderr,"\t\t-ry value	   rotate around yy axis\n");
     fprintf(stderr,"\t\t-rz value	   rotate around zz axis\n");
+    fprintf(stderr,"\t\t-N      	   invert normals\n");
+
 
 
     fprintf(stderr,"\t\t-R                 use relative coords\n");
@@ -1908,7 +1914,7 @@ int GetOptions(int argc, char** argv) {
 			    InvalidOption(argv[i]);
 		    }
 		    break;
-	        case 'r':
+        case 'r':
 		    switch (argv[i][2]) {
 			case 'x':
 			    i++;
@@ -1927,11 +1933,14 @@ int GetOptions(int argc, char** argv) {
 			default:
 			    InvalidOption(argv[i]);
                     }
-                    break;
+                break;
 		case 'm':
 		    i++;
 		    Material = argv[i];
 		    break;
+        case 'N':
+            InvertNormals = 1;
+            break;
 		case 'g':
 		    i++;
 		    SelectGroup[SelGroups++] = argv[i];
