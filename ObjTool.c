@@ -839,17 +839,19 @@ ObjFile *CreateShadowObj_Projection(ObjFile *obj) {
 	if ( obj->verts[i][zcoord]<zmin )
 		zmin = obj->verts[i][zcoord];
 
-   unsigned char flags[obj->stats.verts];
+    /* Flags may be use to reject vertexes
+    unsigned char flags[obj->stats.verts];
     // Reset all flags;
     for( i=0 ; i<obj->stats.verts ; i++ )
         flags[i] = 0;
+    */
 
    // Find leftest vertex
    float xmin = MAX_FLOAT;
    float ymin = MAX_FLOAT;
    int   vmin = -1;
    int   fmin = -1;
-   int   nmin = -1;
+   //int   nmin = -1;
 
    int fi, ni;
    for( fi=0 ; fi<obj->stats.faces ; fi++ )
@@ -860,7 +862,7 @@ ObjFile *CreateShadowObj_Projection(ObjFile *obj) {
 		ymin = obj->verts[i][ycoord];
 		vmin = i;
 		fmin = fi;
-		nmin = ni;
+		//nmin = ni;
 	}
    }
    
@@ -871,7 +873,7 @@ ObjFile *CreateShadowObj_Projection(ObjFile *obj) {
    double ap = PI/2.;
    int vp = vmin;
    int fp = fmin;
-   int np = nmin;
+   //int np = nmin;
 
    float sum_x = xp;
    float sum_y = yp;
@@ -883,7 +885,7 @@ ObjFile *CreateShadowObj_Projection(ObjFile *obj) {
 	shadow->stats.verts = si+1;
 	
    }
-   if ( vp>=0 ) flags[vp] = 1;
+   //if ( vp>=0 ) flags[vp] = 1;
    printf("starting vertex %d, %f, %f\n", vp,xp,yp);
    
    // Looking for boundary
@@ -1002,7 +1004,7 @@ ObjFile *CreateShadowObj_Projection(ObjFile *obj) {
                 yp += dy*tdist;
                 vp = -1;    // Unexistant/new vertex
                 fp = nfi;
-                np = nni;
+                //np = nni;
                 
                 sum_x += xp;
                 sum_y = yp;
@@ -1052,7 +1054,7 @@ ObjFile *CreateShadowObj_Projection(ObjFile *obj) {
                 yp = ymax;
                 vp = vmax;
                 fp = fmax;
-                np = nmax;
+                //np = nmax;
                 ap = amax;
         }
         // Register new vertex
