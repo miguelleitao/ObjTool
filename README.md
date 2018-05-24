@@ -13,8 +13,8 @@ _________
 
 _________
 ### Dependences
-ObjTool is implemented in C from scratch. It does not have any special dependences.
-To build ObjTool you will only require a C compiler (usually gcc) and a math library.
+**ObjTool** is implemented in C from scratch. It does not have any special dependences.
+To build ObjTool you will only require a C compiler (usually gcc) and the linmath library.
 
 _________
 ### Download / Build / Install
@@ -38,7 +38,7 @@ ObjTool [options] inputfile1.obj inputfile2.obj
     -zmax value         define zmax
     -o name             select object
     -g name 	        select obj group
-    -m name	            select material
+    -m name             select material
     -tx value	        translate x
     -ty value	        translate y
     -tz value	        translate z
