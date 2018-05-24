@@ -1,0 +1,3 @@
+[submodule "linmath"]
+	path = linmath
+	url = https://github.com/miguelleitao/linmath.git
