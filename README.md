@@ -19,7 +19,7 @@ To build ObjTool you will only require a C compiler (usually gcc) and the linmat
 _________
 ### Download / Build / Install
 
-    git clone git@github.com:miguelleitao/ObjTool.git
+    git clone --recurse-submodules git@github.com:miguelleitao/ObjTool.git
     cd ObjTool
     make
     sudo make install
