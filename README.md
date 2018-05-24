@@ -9,7 +9,7 @@ _________
 * Select (use only) geometry that is (or is not) part of a specific object.
 * Select (use only) geometry that is (or is not) marked with a specific material.
 * Select (use only) geometry according to its position.
-* Apply transformations (translation/rotation/scale) to geometry.
+* Apply transformations (translation/rotation/scale) to selected (or all) geometry.
 
 _________
 ### Dependences
@@ -18,11 +18,12 @@ To build ObjTool you will only require a C compiler (usually gcc) and a math lib
 
 _________
 ### Download / Build / Install
-git clone git@github.com:miguelleitao/ObjTool.git
-cd ObjTool
-make
-sudo make install
-ObjectTool
+
+    git clone git@github.com:miguelleitao/ObjTool.git
+    cd ObjTool
+    make
+    sudo make install
+    ObjTool
 
 _________
 ### Usage
@@ -49,10 +50,10 @@ ObjTool [options] inputfile1.obj inputfile2.obj
     -ry value	        rotate around yy axis
     -rz value	        rotate around zz axis
     -R                  use relative coords    
-    -M		            Do not output mtllib directives
+    -M	                Do not output mtllib directives
     -c                  solid cut
-    -n		            negate face filter condition( -g,-m )
+    -n                  negate face filter condition( -g,-m )
     -O outfile          output to outfile (default: stdout)
-    -e		            Explode outfile into single objects
+    -e                  Explode outfile into single objects
     -S shadow_file      shadow output to shadow_file (default: no shadow ouput)
 ```
