@@ -3,6 +3,9 @@ The Swiss Army Knife for Wavefront OBJ models
 
 ObjTool is a command-line utility to work with Wavefront OBJ files.
 
+Uses OBJ file format as defined in http://paulbourke.net/dataformats/obj/
+Not all OBJ file format specs are implemented.
+
 _________
 ### Features
 * Join geometry from several OBJ files into one.
