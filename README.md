@@ -1,3 +1,4 @@
+![image](https://travis-ci.org/miguelleitao/pipeline.svg?branch=master "Linux Build Status") 
 # ObjTool
 The Swiss Army Knife for Wavefront OBJ models
 
