@@ -1798,17 +1798,13 @@ void Usage() {
     fprintf(stderr,"\t\t-ry value	   rotate around yy axis\n");
     fprintf(stderr,"\t\t-rz value	   rotate around zz axis\n");
     fprintf(stderr,"\t\t-N      	   invert normals\n");
-
-
-
     fprintf(stderr,"\t\t-R                 use relative coords\n");
     fprintf(stderr,"\t\t-M		   Do not output mtllib directives\n");
     fprintf(stderr,"\t\t-c                 solid cut\n");
     fprintf(stderr,"\t\t-n		   negate face filter condition( -g,-m )\n");
     fprintf(stderr,"\t\t-O outfile         output to outfile (default: stdout)\n");
     fprintf(stderr,"\t\t-e		   Explode outfile into single objects\n");
-    fprintf(stderr,"\t\t-S shadow_file     shadow output to shadow_file (default: no shadow ouput)\n");
-    
+    fprintf(stderr,"\t\t-S shadow_file     shadow output to shadow_file (default: no shadow ouput)\n\n");
 }
 
 void InvalidOption(char *opt) {
