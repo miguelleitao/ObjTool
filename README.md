@@ -53,6 +53,7 @@ ObjTool [options] inputfile1.obj inputfile2.obj
     -rx value	        rotate around xx axis
     -ry value	        rotate around yy axis
     -rz value	        rotate around zz axis
+    -N			invert normals
     -R                  use relative coords    
     -M	                Do not output mtllib directives
     -c                  solid cut
