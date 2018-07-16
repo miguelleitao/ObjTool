@@ -116,7 +116,8 @@ short int InvertNormals = 0;
 char *SelectGroup[20];
 char *SelectObject[20];
 int SelGroups = 0;
-int SelObjects = 0;;
+int SelObjects = 0;
+short int genTextCoords = 0;
 
 #define SinF(x) ( sinf(x) )
 #define CosF(x) ( cosf(x) )
@@ -200,8 +201,6 @@ int NormIndex(ObjFile *obj, int i, int total) {
 	return 1+obj->order.norms[i-1];
 }
 
-
-
 void ResetObjStats(ObjStats *os) {
 	os->verts = 0;
 	os->faces = 0;
@@ -224,7 +223,6 @@ void ResetObjStats(ObjStats *os) {
 	os->tmin[1] =  MAX_FLOAT;
 	os->tmax[0] = -MAX_FLOAT;
 	os->tmax[1] = -MAX_FLOAT;
-
 }
 
 void PrintObjStats(ObjStats *os) {
@@ -786,7 +784,6 @@ ObjFile *CreateShadowObj_Projection(ObjFile *obj) {
     int zcoord = 1;
     if (Verbose) fprintf(stderr,"Creating shadow\n");
     
-  
     int i, si;	// face indexs
     ObjFile *shadow = Malloc(1,sizeof(ObjFile));
 
@@ -1369,11 +1366,22 @@ void SaveObjFile(char *fname, ObjFile *obj) {
 	if ( Verbose>10 ) printf("    %d vertexes saved\n", nv);
 	
 	// Save Texture Coords
-	for( i=0 ; i<obj->stats.texts ; i++ ) 
-	    if ( obj->counts.texts[i] > 0 ) {
-		fprintf(fout,"vt %f %f\n", obj->texts[i][0],obj->texts[i][1]);
-		nt++;
-	    }
+	if ( genTextCoords ) {
+	    for( i=0 ; i<obj->stats.verts ; i++ ) {
+                if ( obj->counts.verts[i] > 0 ) {
+                    fprintf(fout,"vt %f %f\n", obj->verts[i][0],obj->verts[i][1]);
+                    nt++;
+                }
+            }
+
+	}
+	else {
+	    for( i=0 ; i<obj->stats.texts ; i++ ) 
+	        if ( obj->counts.texts[i] > 0 ) {
+	    	    fprintf(fout,"vt %f %f\n", obj->texts[i][0],obj->texts[i][1]);
+		    nt++;
+	        }
+	}
 	if ( Verbose>10 ) printf("    %d texture vertexes saved\n", nt);
 	
 	// Save Norms
@@ -1417,9 +1425,14 @@ void SaveObjFile(char *fname, ObjFile *obj) {
 	    for( n=0 ; n<obj->faces[i].nodes ; n++ ) {
 		fprintf(fout,"%d", VertIndex(obj,obj->faces[i].Node[n][0],nv) );
 		fprintf(fout,"/");
-		
-		if ( obj->faces[i].Node[n][1]!=NULL_IDX )
+	
+		if ( genTextCoords ) {
+                        fprintf(fout,"%d", VertIndex(obj,obj->faces[i].Node[n][0],nv) );
+		}
+		else {	
+		    if ( obj->faces[i].Node[n][1]!=NULL_IDX )
 			fprintf(fout,"%d", TextIndex(obj,obj->faces[i].Node[n][1],nt) );
+		}
 		fprintf(fout,"/");
 
 		if ( obj->faces[i].Node[n][2]!=NULL_IDX )
@@ -1968,6 +1981,9 @@ int GetOptions(int argc, char** argv) {
 		case 'e':
 		    Explode = 1;
 		    break;
+		case 'X':
+		    genTextCoords = 1;
+		    break;
 		default:
 		    InvalidOption(argv[i]);
 	    }
@@ -2079,6 +2095,9 @@ int JoinObjFiles(int nObjs, ObjFile ObjSet[], ObjFile *obj) {
 	return nObjs;
 }
 
+void genTextureCoords() {
+		
+}
 
 int main(int argc, char **argv) {
 
