@@ -228,8 +228,10 @@ void ResetObjStats(ObjStats *os) {
 void PrintObjStats(ObjStats *os) {
 printf("printing stats\n");
 	printf("Vertices: %d\n", os->verts);
-	printf("  Min: %.3f %.3f %.3f\n", os->vmin[0], os->vmin[1], os->vmin[2]);
-	printf("  Max: %.3f %.3f %.3f\n", os->vmax[0], os->vmax[1], os->vmax[2]);
+	if ( os->verts > 0 ) {
+	    printf("  Min: %.3f %.3f %.3f\n", os->vmin[0], os->vmin[1], os->vmin[2]);
+	    printf("  Max: %.3f %.3f %.3f\n", os->vmax[0], os->vmax[1], os->vmax[2]);
+	}
 	printf("Normals: %d\n", os->norms);
 	printf("Texture Coords: %d\n", os->texts);
 	if ( os->texts > 0 ) {
@@ -1353,8 +1355,7 @@ void SaveObjFile(char *fname, ObjFile *obj) {
 	}
 	fprintf(fout,"# file written by ObjTool\n\n");
         
-        // Save VertexesUseMtl: 0
-
+        // Save Vertexes UseMtl: 0
         assert(obj->counts.verts);
 	for( i=0 ; i<obj->stats.verts ; i++ ) {
             if ( Verbose>30 ) printf("vertex %d-%d\n", i, nv);
@@ -1781,9 +1782,9 @@ void ProcVerts(ObjFile *obj) {
 		z = obj->norms[i][2];
 		obj->norms[i][1] =  y*CosF(Rotate[0]) - z*SinF(Rotate[0]);
                 obj->norms[i][2] =  y*SinF(Rotate[0]) + z*CosF(Rotate[0]);
-        if ( InvertNormals )
-            for( c=0 ; c<3 ; c++)
-                obj->norms[i][c] *= -1.;
+		if ( InvertNormals )
+		    for( c=0 ; c<3 ; c++)
+		        obj->norms[i][c] *= -1.;
 	}
 }
 
@@ -2106,7 +2107,7 @@ int main(int argc, char **argv) {
 
 	if ( argc<=1 ) {
 		Usage();
-		exit(0);
+		exit(1);
 	}
 	int fi = GetOptions(argc,argv);
 	//printf("# fi = %d, argc=%d\n",fi,argc);
@@ -2114,6 +2115,7 @@ int main(int argc, char **argv) {
 	if ( fi>=argc ) {
 	    fprintf(stderr,"Al least one input file must be specified.\n");
 	    Usage();
+	    exit(1);
 	}
 
 
