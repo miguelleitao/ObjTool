@@ -1807,9 +1807,9 @@ void Usage() {
     fprintf(stderr,"\t\t-sy value	   scale y\n");
     fprintf(stderr,"\t\t-sz value	   scale z\n");
     fprintf(stderr,"\t\t-s value	   global scale\n"); 
-    fprintf(stderr,"\t\t-rx value	   rotate around xx axis\n");
-    fprintf(stderr,"\t\t-ry value	   rotate around yy axis\n");
-    fprintf(stderr,"\t\t-rz value	   rotate around zz axis\n");
+    fprintf(stderr,"\t\t-rx ang		   rotate ang degrees around xx axis\n");
+    fprintf(stderr,"\t\t-ry ang		   rotate ang degrees around yy axis\n");
+    fprintf(stderr,"\t\t-rz ang		   rotate ang degrees around zz axis\n");
     fprintf(stderr,"\t\t-N      	   invert normals\n");
     fprintf(stderr,"\t\t-R                 use relative coords\n");
     fprintf(stderr,"\t\t-M		   Do not output mtllib directives\n");
@@ -1823,6 +1823,7 @@ void Usage() {
 void InvalidOption(char *opt) {
     fprintf(stderr,"Invalid option: '%s'\n", opt);
     Usage();
+    exit(1);
 }
 
 
