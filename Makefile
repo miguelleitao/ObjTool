@@ -7,6 +7,10 @@ all: ObjTool
 ObjTool: ObjTool.o
 	$(CC) -o $@ $^ -lm
 
+linmath:
+	git submodule init
+	git submodule update
+
 install: ObjTool
 	cp $^ /usr/local/bin
 
