@@ -355,8 +355,9 @@ int GetObjStats(char *fname, ObjStats *os) {
 char *ReadFaceNode(char *lptr, FaceNode node) {
         // Read %d/%d/%d set
 	// VeterxIdx/TextureCoordIdx/NormalIdx
-printf("reading facenode '%s'\n", lptr);
+
 	while( *lptr==' ' || *lptr=='\t' ) lptr++;
+
 	int i;
 	for( i=0 ; i<3 ; i++ ) node[i] = NULL_IDX;
 	for( i=0 ; i<3 ; i++ ) {
@@ -372,9 +373,6 @@ printf("reading facenode '%s'\n", lptr);
 		lptr++;
 		if ( !*lptr || *lptr==' ' || *lptr=='\t' || *lptr=='\n' || *lptr=='\r' ) break;
 	}
-		
-printf("  reading facenode leu %d itens\n", i);
-
 	return lptr;
 }
 
@@ -1439,10 +1437,12 @@ void SaveObjFile(char *fname, ObjFile *obj) {
 		    if ( obj->faces[i].Node[n][1]!=NULL_IDX )
 			fprintf(fout,"%d", TextIndex(obj,obj->faces[i].Node[n][1],nt) );
 		}
-		fprintf(fout,"/");
 
-		if ( obj->faces[i].Node[n][2]!=NULL_IDX )
+		//fprintf(fout,"/");
+		if ( obj->faces[i].Node[n][2]!=NULL_IDX ) {
+			fprintf(fout,"/");
 			fprintf(fout,"%d", NormIndex(obj,obj->faces[i].Node[n][2],nn) );
+		}
 
 		fprintf(fout," ");
 	    }
