@@ -369,6 +369,7 @@ char *ReadFaceNode(char *lptr, FaceNode node) {
 		while( *lptr!=' ' && *lptr!='\t' && *lptr!='/' && *lptr ) lptr++;
 		if ( *lptr!='/' ) return lptr;
 		lptr++;
+		if ( !*lptr || *lptr==' ' || *lptr=='\t' || *lptr=='\n' || *lptr=='\r' ) return lptr;
 	}	
 	return lptr;
 }
