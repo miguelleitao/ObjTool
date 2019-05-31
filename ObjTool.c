@@ -355,6 +355,7 @@ int GetObjStats(char *fname, ObjStats *os) {
 char *ReadFaceNode(char *lptr, FaceNode node) {
         // Read %d/%d/%d set
 	// VeterxIdx/TextureCoordIdx/NormalIdx
+printf("reading facenode '%s'\n", lptr);
 	while( *lptr==' ' || *lptr=='\t' ) lptr++;
 	int i;
 	for( i=0 ; i<3 ; i++ ) node[i] = NULL_IDX;
@@ -366,10 +367,13 @@ char *ReadFaceNode(char *lptr, FaceNode node) {
 		node[i] = atoi(lptr);
 		if ( node[i]==0 )
 			fprintf(stderr,"Invalid Node Coord %d, %d: %s\n", i, node[i], lptr);
-		while( *lptr!=' ' && *lptr!='\t' && *lptr!='/' && *lptr ) lptr++;
-		if ( *lptr!='/' ) return lptr;
+		while( *lptr && *lptr!=' ' && *lptr!='\t' && *lptr!='/' ) lptr++;
+		if ( *lptr!='/' ) break;
 		lptr++;
-	}	
+		if ( !*lptr || *lptr==' ' || *lptr=='\t' || *lptr=='\n' || *lptr=='\r' ) break;
+	}
+		
+printf("  reading facenode leu %d itens\n", i);
 	return lptr;
 }
 
