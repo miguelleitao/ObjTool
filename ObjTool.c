@@ -2106,6 +2106,33 @@ void genTextureCoords() {
 		
 }
 
+void SaveImageMap(char *OutputFile, ObjFile *obj) {
+    int nVerts = obj->stats.verts;
+    float side = round(sqrt(nVerts));
+    int iSide = (int)side;
+    
+    float delta[3];
+    float minD = 1.e8;
+    int   minI = -1;
+    int i;
+    for( i=0 ; i<3 ; i++ ) {
+        delta[i] = obj->stats->vmax[i]-obj->stats->vmin[i];
+        if (delta[i]<min) {
+            minD = delta[i];
+            minI = i;
+        }
+    }
+    for( i=0 ; i<3 ; i++ ) {
+        if ( i==minI )
+            delta[i] /= 256.;
+        else
+            delta[i] /= side;
+    }
+    
+}
+    
+}
+
 int main(int argc, char **argv) {
 
 	fprintf(stderr,"# ObjTool Compile date: %s\n", CDATE);
