@@ -2117,6 +2117,7 @@ void genTextureCoords() {
 		
 }
 
+//int getVertexIdx(
 
 void SaveImageMap(char *OutputFile, ObjFile *obj) {
     int nVerts = obj->stats.verts;
@@ -2124,36 +2125,75 @@ void SaveImageMap(char *OutputFile, ObjFile *obj) {
     //int iSide = (int)side;
     
     printf("im size: %d %f\n",nVerts,side);
-    float delta[3];
-    float minD = 1.e8;
-    int   minI = -1;
     int xi, yi=0;
-    for( xi=2 ; xi<=(int)side ; xi++ ) {
-        int yi = nVerts / xi;
+    for( xi=(int)side ; xi>=2 ; xi-- ) {
+        yi = nVerts / xi;
         printf("%d*%d=%d  <> %d\n", xi, yi, xi*yi, nVerts);
         if ( yi*xi == nVerts ) break;
     }
+    printf("%d*%d=%d  <> %d\n", xi, yi, xi*yi, nVerts);
     if ( xi*yi!=nVerts ) {
         printf("Erro de amostragem\n");
         return;
     }
     printf("xi yi %d %d\n", xi, yi);
+    int maxS, minS;
+    if ( xi>yi ) {
+        maxS = xi;
+        minS = yi;
+    }
+    else {
+        maxS = yi;
+        minS = xi;
+    }
     int i;
+    float delta[3];
+    // float minV[3];
+    // float maxV[3];
+    float minD = 1.e8;
+    int   minI = -1;
+    float maxD = -1.e8;
+    int   maxI = -1;
+    int   medI = -1;
     for( i=0 ; i<3 ; i++ ) {
         delta[i] = obj->stats.vmax[i]-obj->stats.vmin[i];
         if (delta[i]<minD) {
             minD = delta[i];
             minI = i;
         }
+        if (delta[i]>maxD) {
+            maxD = delta[i];
+            maxI = i;
+        }
+        printf("i: %d, delta: %f, minD: %f, maxD:%f\n",i, delta[i],minD, maxD);
     }
     printf("im size: %f %f %f\n",delta[0],delta[1],delta[2]);
+    printf("minS: %d maxS: %d, maxI: %d\n",minS, maxS, maxI);
     for( i=0 ; i<3 ; i++ ) {
         if ( i==minI )
             delta[i] /= 256.;
-        else
-            delta[i] /= side;
+        else {
+            if ( i==maxI )
+                delta[i] /= maxS;
+            else {
+                medI = i;
+                delta[i] /= minS;
+            }
+        }
     }
+    assert(medI>=0);
     printf("im deltas: %f %f %f\n",delta[0],delta[1],delta[2]);
+    for( xi=0 ; xi<maxS ; xi++ ) {
+        double x = obj->stats.vmin[maxI] + yi*delta[maxI];
+        for( yi=0 ; yi<minS ; yi++ ) {
+            double y = obj->stats.vmin[medI] + yi*delta[medI];
+            printf("looking for vertext %f %f ...", x,y);
+            int idx= getVertexIdx(x,y);
+            if (idx>=0) printf("found vertex %d\n", idx);
+            else printf(erro\n");
+                               
+        }
+    }
 }
     
 
