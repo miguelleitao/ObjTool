@@ -1572,9 +1572,8 @@ void FreeObjFile(ObjFile *obj) {
      printf("free texts\n");
 
     Free(obj->norms); 
- printf("free texts\n");
+ printf("free norms\n");
 
-    Free(obj->texts);
     Free(obj->grps);  
     Free(obj->mats);
     Free(obj->objs);
@@ -2124,9 +2123,21 @@ void SaveImageMap(char *OutputFile, ObjFile *obj) {
     float side = round(sqrt(nVerts));
     //int iSide = (int)side;
     
+    printf("im size: %d %f\n",nVerts,side);
     float delta[3];
     float minD = 1.e8;
     int   minI = -1;
+    int xi, yi=0;
+    for( xi=2 ; xi<=(int)side ; xi++ ) {
+        int yi = nVerts / xi;
+        printf("%d*%d=%d  <> %d\n", xi, yi, xi*yi, nVerts);
+        if ( yi*xi == nVerts ) break;
+    }
+    if ( xi*yi!=nVerts ) {
+        printf("Erro de amostragem\n");
+        return;
+    }
+    printf("xi yi %d %d\n", xi, yi);
     int i;
     for( i=0 ; i<3 ; i++ ) {
         delta[i] = obj->stats.vmax[i]-obj->stats.vmin[i];
@@ -2135,13 +2146,14 @@ void SaveImageMap(char *OutputFile, ObjFile *obj) {
             minI = i;
         }
     }
+    printf("im size: %f %f %f\n",delta[0],delta[1],delta[2]);
     for( i=0 ; i<3 ; i++ ) {
         if ( i==minI )
             delta[i] /= 256.;
         else
             delta[i] /= side;
     }
-    
+    printf("im deltas: %f %f %f\n",delta[0],delta[1],delta[2]);
 }
     
 
