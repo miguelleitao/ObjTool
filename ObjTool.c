@@ -2170,9 +2170,12 @@ int main(int argc, char **argv) {
 	SetIndexs(&obj);
 	if ( Explode )
 		ExplodeOutputFile(OutputFile, &obj);
-	else
-		SaveObjFile(OutputFile, &obj);
-
+	else {
+        if ( strrstr(OutputFile, ".ppm") ) 
+            SaveImageMap(OutputFile, &obj);
+        else
+            SaveObjFile(OutputFile, &obj);
+    }
 	if ( ShadowOutputFile ) {
             printf("shadow\n");
 			//ObjFile *Shadow = CreateShadowObj(&obj);
