@@ -128,6 +128,18 @@ int JoinObjFiles(int nObjs, ObjFile ObjSet[], ObjFile *obj);
 void SetUseCounters(ObjFile *obj);
 void SetIndexs(ObjFile *obj);
 
+char* strrstr(char *Str, const char *SubStr)
+{
+    int i=0;
+    int find_len = strlen(SubStr);
+
+    for( i=strlen(Str)-find_len; i>=0; i--) {
+        if( ! strncmp(Str+i, SubStr, find_len) )
+                return Str+i;
+    }
+    return NULL;    
+}
+
 void *Malloc(int n, size_t dim) {
 	long size = n*dim;
 	void *buf = malloc(size+MEM_META_INFO_SIZE);
@@ -2106,18 +2118,19 @@ void genTextureCoords() {
 		
 }
 
+
 void SaveImageMap(char *OutputFile, ObjFile *obj) {
     int nVerts = obj->stats.verts;
     float side = round(sqrt(nVerts));
-    int iSide = (int)side;
+    //int iSide = (int)side;
     
     float delta[3];
     float minD = 1.e8;
     int   minI = -1;
     int i;
     for( i=0 ; i<3 ; i++ ) {
-        delta[i] = obj->stats->vmax[i]-obj->stats->vmin[i];
-        if (delta[i]<min) {
+        delta[i] = obj->stats.vmax[i]-obj->stats.vmin[i];
+        if (delta[i]<minD) {
             minD = delta[i];
             minI = i;
         }
@@ -2131,7 +2144,7 @@ void SaveImageMap(char *OutputFile, ObjFile *obj) {
     
 }
     
-}
+
 
 int main(int argc, char **argv) {
 
