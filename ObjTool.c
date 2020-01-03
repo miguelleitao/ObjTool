@@ -103,6 +103,7 @@ Vert VMax = {  1e30,  1e30,  1e30 };
 Vert Translate = { 0., 0., 0. };
 Vert Scale = { 1., 1., 1. };
 Vert Rotate = { 0., 0., 0. };
+Vert Vertical = { 0., 0., 0. };
 char *Material = NULL;
 char *OutputFile = NULL;
 char *ShadowOutputFile = NULL;
@@ -110,6 +111,7 @@ short int SolidCut = 0;
 short int Relative = 0;
 short int Verbose = 0;
 short int info = 0;
+short int findIntersection = 0;
 short int Negate = 0;
 short int Explode = 0;
 short int InvertNormals = 0;
@@ -178,6 +180,15 @@ char *StrDup(char *strin) {
 	}
 	*strptr = 0;
 	return strout;
+}
+
+float Distance( Vert v1, Vert v2 ) {
+    double total = 0.;
+    for( int i=0 ; i<3 ; i++ ) {
+        double d = v1[i]-v2[i];
+        total += d*d;
+    }
+    return sqrt(total);
 }
 
 int ReadVec2f(char *str, float *data) {
@@ -473,7 +484,7 @@ double SegmentsIntersection(Vec2 p1, Vec2 p2, Vec2 q1, Vec2 q2) {
 }
 
 double FindClosestIntersection(float x1, float y1,
-                               float x2,float y2, 
+                               float x2, float y2, 
                                ObjFile *obj, 
                                int *nfi, int *nni) {
     int ycoord = 2; // must be the same as the one defined at CreateShadowObj
@@ -1642,8 +1653,6 @@ void SetUseCounters(ObjFile *obj) {
 	} 
 }
 
-
-
 void CleanFaces(ObjFile *obj) {
 	int i, n;
 	int midx = 0, oidx = 0, gidx = 0;	// current indexes.
@@ -1739,22 +1748,62 @@ void FilterVerts(ObjFile *obj, Vert min, Vert max) {
 	int i, c;
 	for( i=0 ; i<obj->stats.verts ; i++ ) {
 	    for( c=0 ; c<3 ; c++ ) {
-		if ( obj->verts[i][c]<min[c] ) {
-		    if ( ! SolidCut ) {
-			obj->counts.verts[i] = NULL_IDX;
-			break;
-		    }
-		    else obj->verts[i][c] = min[c];
-		}
-		if ( obj->verts[i][c]>max[c] ) {
-		    if ( ! SolidCut ) {
-			obj->counts.verts[i] = NULL_IDX;
-			break;
-		    }
-		    else obj->verts[i][c] = max[c];
-		}
+            if ( obj->verts[i][c]<min[c] ) {
+                if ( ! SolidCut ) {
+                obj->counts.verts[i] = NULL_IDX;
+                break;
+                }
+                else obj->verts[i][c] = min[c];
+            }
+            if ( obj->verts[i][c]>max[c] ) {
+                if ( ! SolidCut ) {
+                    obj->counts.verts[i] = NULL_IDX;
+                    break;
+                }
+                else obj->verts[i][c] = max[c];
+            }
 	    }
 	}
+}
+
+double findVerticalIntersection(ObjFile *obj, Vert coords) {
+    int i;
+    int zCoord = 3-findIntersection;
+    for( i=0 ; i<obj->stats.faces ; i++ ) {
+        float xMin =  1e8;
+        float xMax = -1e8;
+        float yMin =  1e8;
+        float yMax = -1e8;
+        for( int v=0 ; v<obj->faces[i].nodes ; v++ ) {
+            int vidx = obj->faces[i].Node[v];
+            float vx = obj->verts[vidx][0];
+            float vy = obj->verts[vidx][findIntersection];
+            if ( vx<xMin ) xMin = vx;
+            if ( vx>xMax ) xMax = vx;
+            if ( vy<yMin ) yMin = vy;
+            if ( vy>yMax ) yMax = vy;
+        }
+        if ( coords[0]<xMin || coords[0]>xMax ) continue;
+        if ( coords[1]<yMin || coords[1]>yMax ) continue;
+        // face intersected.
+        Vert medium = { 0., 0., 0. };
+        double totDist = 0.;
+        for( int v=0 ; v<obj->faces[i].nodes ; v++ ) {
+            int vidx = obj->faces[i].Node[v];
+            coords[zCoord] = obj->verts[vidx][zCoord];
+            double dist = Distance(coords,obj->verts[vidx]);
+            if ( dist<1e8 ) return obj->verts[vidx][zCoord];
+            double invDist = 1. / dist;
+            for( int i=0 ; i<3 ; i++ ) 
+                medium[i] += (obj->verts[vidx][i]) * invDist;
+            totDist += invDist;
+        }
+        for( i=0 ; i<3 ; i++ ) 
+            medium[i] /= totDist;
+        return medium[zCoord];
+    }
+    // No intersetion found.
+    return 0.;
 }
 
 void ProcVerts(ObjFile *obj) {
@@ -1763,23 +1812,23 @@ void ProcVerts(ObjFile *obj) {
 	int i, c;
 	for( i=0 ; i<obj->stats.verts ; i++ ) {
 	    if ( obj->counts.verts[i] > 0 ) {
-	    	for( c=0 ; c<3 ; c++ ) {
-		    obj->verts[i][c] *= Scale[c];
-		    obj->verts[i][c] += Translate[c];
-		}
-		float x,y,z;
-		x = obj->verts[i][0];
-		y = obj->verts[i][1];
-		obj->verts[i][0] =  x*CosF(Rotate[2]) - y*SinF(Rotate[2]);
-		obj->verts[i][1] =  x*SinF(Rotate[2]) + y*CosF(Rotate[2]);
-		x = obj->verts[i][0];
-		z = obj->verts[i][2];
-		obj->verts[i][0] =  x*CosF(Rotate[1]) + z*SinF(Rotate[1]);
-                obj->verts[i][2] = -x*SinF(Rotate[1]) + z*CosF(Rotate[1]);
-		y = obj->verts[i][1];
-		z = obj->verts[i][2];
-		obj->verts[i][1] =  y*CosF(Rotate[0]) - z*SinF(Rotate[0]);
-                obj->verts[i][2] =  y*SinF(Rotate[0]) + z*CosF(Rotate[0]);
+            for( c=0 ; c<3 ; c++ ) {
+                obj->verts[i][c] *= Scale[c];
+                obj->verts[i][c] += Translate[c];
+            }
+            float x,y,z;
+            x = obj->verts[i][0];
+            y = obj->verts[i][1];
+            obj->verts[i][0] =  x*CosF(Rotate[2]) - y*SinF(Rotate[2]);
+            obj->verts[i][1] =  x*SinF(Rotate[2]) + y*CosF(Rotate[2]);
+            x = obj->verts[i][0];
+            z = obj->verts[i][2];
+            obj->verts[i][0] =  x*CosF(Rotate[1]) + z*SinF(Rotate[1]);
+                    obj->verts[i][2] = -x*SinF(Rotate[1]) + z*CosF(Rotate[1]);
+            y = obj->verts[i][1];
+            z = obj->verts[i][2];
+            obj->verts[i][1] =  y*CosF(Rotate[0]) - z*SinF(Rotate[0]);
+            obj->verts[i][2] =  y*SinF(Rotate[0]) + z*CosF(Rotate[0]);
 	    }
 	}
 
@@ -1793,11 +1842,11 @@ void ProcVerts(ObjFile *obj) {
 		x = obj->norms[i][0];
 		z = obj->norms[i][2];
 		obj->norms[i][0] =  x*CosF(Rotate[1]) + z*SinF(Rotate[1]);
-                obj->norms[i][2] = -x*SinF(Rotate[1]) + z*CosF(Rotate[1]);
+        obj->norms[i][2] = -x*SinF(Rotate[1]) + z*CosF(Rotate[1]);
 		y = obj->norms[i][1];
 		z = obj->norms[i][2];
 		obj->norms[i][1] =  y*CosF(Rotate[0]) - z*SinF(Rotate[0]);
-                obj->norms[i][2] =  y*SinF(Rotate[0]) + z*CosF(Rotate[0]);
+        obj->norms[i][2] =  y*SinF(Rotate[0]) + z*CosF(Rotate[0]);
 		if ( InvertNormals )
 		    for( c=0 ; c<3 ; c++)
 		        obj->norms[i][c] *= -1.;
@@ -1815,10 +1864,10 @@ void Usage() {
     fprintf(stderr,"\t\t-zmin value        define zmin\n");
     fprintf(stderr,"\t\t-zmax value        define zmax\n");
     fprintf(stderr,"\t\t-o name            select object\n");
-    fprintf(stderr,"\t\t-g name 	   select obj group\n");
+    fprintf(stderr,"\t\t-g name            select obj group\n");
     fprintf(stderr,"\t\t-m name	           select material\n");
-    fprintf(stderr,"\t\t-tx value	   translate x\n");
-    fprintf(stderr,"\t\t-ty value	   translate y\n");
+    fprintf(stderr,"\t\t-tx value          translate x\n");
+    fprintf(stderr,"\t\t-ty value          translate y\n");
     fprintf(stderr,"\t\t-tz value	   translate z\n");
     fprintf(stderr,"\t\t-sx value	   scale x\n");
     fprintf(stderr,"\t\t-sy value	   scale y\n");
@@ -1827,11 +1876,13 @@ void Usage() {
     fprintf(stderr,"\t\t-rx ang		   rotate ang degrees around xx axis\n");
     fprintf(stderr,"\t\t-ry ang		   rotate ang degrees around yy axis\n");
     fprintf(stderr,"\t\t-rz ang		   rotate ang degrees around zz axis\n");
-    fprintf(stderr,"\t\t-N      	   invert normals\n");
+    fprintf(stderr,"\t\t-N     	   invert normals\n");
     fprintf(stderr,"\t\t-R                 use relative coords\n");
     fprintf(stderr,"\t\t-M		   Do not output mtllib directives\n");
     fprintf(stderr,"\t\t-c                 solid cut\n");
     fprintf(stderr,"\t\t-n		   negate face filter condition( -g,-m )\n");
+    fprintf(stderr,"\t\t-fz x y		   find Z coord for x,y vertical\n");
+    fprintf(stderr,"\t\t-fy x z		   find Y coord for x,z vertical\n");
     fprintf(stderr,"\t\t-O outfile         output to outfile (default: stdout)\n");
     fprintf(stderr,"\t\t-e		   Explode outfile into single objects\n");
     fprintf(stderr,"\t\t-S shadow_file     shadow output to shadow_file (default: no shadow ouput)\n\n");
@@ -1943,30 +1994,45 @@ int GetOptions(int argc, char** argv) {
 		    break;
         case 'r':
 		    switch (argv[i][2]) {
-			case 'x':
-			    i++;
-			    Rotate[0] = PI*atof(argv[i])/180.;
-			    break;
-                        case 'y':
-                            i++;
-                            Rotate[1] = PI*atof(argv[i])/180.;
-                            break;
-                        case 'z':
-                            i++;
-                            Rotate[2] = PI*atof(argv[i])/180.;
-                            break;
-			case ' ':
-			case '\0':
-			default:
-			    InvalidOption(argv[i]);
-                    }
-                break;
+                case 'x':
+                    i++;
+                    Rotate[0] = PI*atof(argv[i])/180.;
+                    break;
+                case 'y':
+                    i++;
+                    Rotate[1] = PI*atof(argv[i])/180.;
+                    break;
+                case 'z':
+                    i++;
+                    Rotate[2] = PI*atof(argv[i])/180.;
+                    break;
+                case ' ':
+                case '\0':
+                default:
+                    InvalidOption(argv[i]);
+            }
+            break;
 		case 'm':
 		    i++;
 		    Material = argv[i];
 		    break;
         case 'N':
             InvertNormals = 1;
+            break;
+        case 'f':
+            // Find intersection
+            switch (argv[i][2]) {
+                case 'z':
+                    findIntersection = 1;
+                case 'y':
+                    findIntersection = 2;
+                default:
+                    InvalidOption(argv[i]);
+            }
+            i++;
+            Vertical[0] = atof(argv[i]);
+            i++;
+            Vertical[1] = atof(argv[i]);
             break;
 		case 'g':
 		    i++;
@@ -2114,10 +2180,27 @@ int JoinObjFiles(int nObjs, ObjFile ObjSet[], ObjFile *obj) {
 }
 
 void genTextureCoords() {
-		
+
 }
 
-//int getVertexIdx(
+int getVertexIdx(ObjFile *obj, int xCoord, int yCoord, double x, double y) {
+    int minI = -1;
+    double minD = 1e8;
+    
+    printf("looking for vertext %f %f ...", x,y);
+    for( int i=0 ; i<obj->stats.verts ; i++ ) {
+        double distX = obj->verts[i][xCoord] - x;
+        double distY = obj->verts[i][yCoord] - y;
+        double dist = distX*distX + distY*distY;
+        if ( dist<minD ) {
+            minD = dist;
+            minI = i;
+        }
+    }
+    if (minI>=0) printf("found vertex %d at dist %f\n", minI, minD);
+    else printf("erro\n");
+    return minI;
+}
 
 void SaveImageMap(char *OutputFile, ObjFile *obj) {
     int nVerts = obj->stats.verts;
@@ -2125,13 +2208,14 @@ void SaveImageMap(char *OutputFile, ObjFile *obj) {
     //int iSide = (int)side;
     
     printf("im size: %d %f\n",nVerts,side);
+    // Find desired imagem geometry
     int xi, yi=0;
     for( xi=(int)side ; xi>=2 ; xi-- ) {
         yi = nVerts / xi;
         printf("%d*%d=%d  <> %d\n", xi, yi, xi*yi, nVerts);
         if ( yi*xi == nVerts ) break;
     }
-    printf("%d*%d=%d  <> %d\n", xi, yi, xi*yi, nVerts);
+    printf("xI*yI=%d*%d=%d  <> %d\n", xi, yi, xi*yi, nVerts);
     if ( xi*yi!=nVerts ) {
         printf("Erro de amostragem\n");
         return;
@@ -2159,11 +2243,11 @@ void SaveImageMap(char *OutputFile, ObjFile *obj) {
         delta[i] = obj->stats.vmax[i]-obj->stats.vmin[i];
         if (delta[i]<minD) {
             minD = delta[i];
-            minI = i;
+            minI = i;       // UP Coord index
         }
         if (delta[i]>maxD) {
             maxD = delta[i];
-            maxI = i;
+            maxI = i;       // Future image X coord index. (Column number)
         }
         printf("i: %d, delta: %f, minD: %f, maxD:%f\n",i, delta[i],minD, maxD);
     }
@@ -2174,26 +2258,34 @@ void SaveImageMap(char *OutputFile, ObjFile *obj) {
             delta[i] /= 256.;
         else {
             if ( i==maxI )
-                delta[i] /= maxS;
+                delta[i] /= maxS;   // Image X resolution
             else {
-                medI = i;
-                delta[i] /= minS;
+                medI = i;           // Image Y coord index (Number of row)
+                delta[i] /= minS;   // Image Y resolution
             }
         }
     }
     assert(medI>=0);
     printf("im deltas: %f %f %f\n",delta[0],delta[1],delta[2]);
+    FILE *fout = fopen(OutputFile,"w");
+    fprintf(fout,"P5 %d %d 255\n",minS,maxS); 
+    
+    int flag[nVerts];
+    for( i=0; i<nVerts ; i++ )
+        flag[i] = 0;
     for( xi=0 ; xi<maxS ; xi++ ) {
         double x = obj->stats.vmin[maxI] + yi*delta[maxI];
         for( yi=0 ; yi<minS ; yi++ ) {
             double y = obj->stats.vmin[medI] + yi*delta[medI];
-            printf("looking for vertext %f %f ...", x,y);
-            int idx= getVertexIdx(x,y);
-            if (idx>=0) printf("found vertex %d\n", idx);
-            else printf(erro\n");
-                               
+            int idx= getVertexIdx(obj,maxI,medI,x,y);
+            if ( flag[idx]>0 ) printf("Erro de flag\n");
+            flag[idx]++;
+            float z = obj->verts[idx][minI];
+            int zq = (int)((z-obj->stats.vmin[minI]) / delta[minI]);
+            fputc(zq, fout);
         }
     }
+    fclose(fout);
 }
     
 
@@ -2238,20 +2330,31 @@ int main(int argc, char **argv) {
 	SetUseCounters(&obj);
 	if ( info ) {
             if ( Verbose>1 )
-			PrintFullObjStats(&obj);
-            else if ( Verbose>0 )
-                        PrintLongObjStats(&obj);
-            else
-                        PrintObjStats(&(obj.stats));
+                PrintFullObjStats(&obj);
+            else 
+                if ( Verbose>0 )
+                    PrintLongObjStats(&obj);
+                else
+                    PrintObjStats(&(obj.stats));
             exit(0);
         }
 	if ( Verbose ) {
-		    if ( Verbose>3 )
-			PrintFullObjStats(&obj);
-		    else
-			PrintObjStats(&(obj.stats));
-	}
-
+        if ( Verbose>3 )
+            PrintFullObjStats(&obj);
+        else
+            PrintObjStats(&(obj.stats));
+    }
+    
+    if ( findIntersection==1 ) {
+        double z = findVerticalIntersection(&obj,Vertical);
+        printf("%lf\n", z);
+        exit(0);
+    }
+    if ( findIntersection==2 ) {
+        double y = findVerticalIntersection(&obj,Vertical);
+        printf("%lf\n", y);
+        exit(0);
+    }
 	FilterVerts( &obj, VMin, VMax );
 
 	//SetIndexs(&obj);
@@ -2263,7 +2366,7 @@ int main(int argc, char **argv) {
 	if ( Explode )
 		ExplodeOutputFile(OutputFile, &obj);
 	else {
-        if ( strrstr(OutputFile, ".ppm") ) 
+        if ( strrstr(OutputFile, ".pgm") ) 
             SaveImageMap(OutputFile, &obj);
         else
             SaveObjFile(OutputFile, &obj);
