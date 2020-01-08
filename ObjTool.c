@@ -129,6 +129,7 @@ short int genTextCoords = 0;
 int JoinObjFiles(int nObjs, ObjFile ObjSet[], ObjFile *obj);
 void SetUseCounters(ObjFile *obj);
 void SetIndexs(ObjFile *obj);
+int getVertexIdx(ObjFile *obj, int xCoord, int yCoord, double x, double y);
 
 char* strrstr(char *Str, const char *SubStr)
 {
@@ -157,7 +158,7 @@ void *Malloc(int n, size_t dim) {
 
 void Free(void *p) {
     if ( ! p ) {
-        if ( Verbose ) fprintf(stderr,"Cannot free unallocated memory\n");
+        if ( Verbose>=0 ) fprintf(stderr,"Cannot free unallocated memory\n");
         return;
     }
 	long *tag_p = p-MEM_META_INFO_SIZE;
@@ -615,7 +616,7 @@ ObjFile *CreateShadowObj(ObjFile *obj) {
     // new version using convex hull
     int ycoord = 2;
     int zcoord = 1;
-    if (Verbose) fprintf(stderr,"Creating shadow\n");
+    if (Verbose>2) fprintf(stderr,"Creating shadow\n");
   
     int i, si;	// face indexs
     ObjFile *shadow = Malloc(1,sizeof(ObjFile));
@@ -800,7 +801,7 @@ ObjFile *CreateShadowObj(ObjFile *obj) {
        shadow->faces[i].Node[2][2] = 1;
    }
    shadow->faces[i-1].Node[1][0] = 1;   // Last polygon uses first vertex 
-   if ( Verbose ) printf("Shadow done\n");
+   if ( Verbose>2 ) printf("Shadow done\n");
    return shadow;
 }
 
@@ -810,7 +811,7 @@ ObjFile *CreateShadowObj_Projection(ObjFile *obj) {
     // Under development...
     int ycoord = 2;
     int zcoord = 1;
-    if (Verbose) fprintf(stderr,"Creating shadow\n");
+    if (Verbose>2) fprintf(stderr,"Creating shadow\n");
     
     int i, si;	// face indexs
     ObjFile *shadow = Malloc(1,sizeof(ObjFile));
@@ -1213,7 +1214,7 @@ ObjFile *CreateShadowObj_Projection(ObjFile *obj) {
        shadow->faces[i].Node[2][2] = 1;
    }
    shadow->faces[i-1].Node[1][0] = 1;   // Last polygon uses first vertex 
-   if ( Verbose ) printf("Shadow done\n");
+   if ( Verbose>2 ) printf("Shadow done\n");
 
    return shadow;
 }
@@ -1721,7 +1722,7 @@ void CleanFaces(ObjFile *obj) {
 		if ( v<1 || v>obj->stats.verts  || obj->counts.verts[v-1]<0 ) {
 		    obj->faces[i].nodes = 0;
 		    if ( Verbose>=3 )
-			fprintf(stderr,"face %d removed.v=%d,count=%d\n", i, v, obj->counts.verts[v-1] );
+                fprintf(stderr,"face %d removed.v=%d,count=%d\n", i, v, obj->counts.verts[v-1] );
 		    break;
 		}
 	    }
@@ -1780,7 +1781,7 @@ double findVerticalIntersection_master(ObjFile *obj, Vert coords) {
         float yMax = -1e8;
         for( int v=0 ; v<obj->faces[i].nodes ; v++ ) {
             printf("    testing node %d\n", v);
-            int vidx = obj->faces[i].Node[v];
+            int vidx = obj->faces[i].Node[v][0];
             printf("    testing node %d, vidx=%d\n", v, vidx);
             float vx = obj->verts[vidx][0];
             float vy = obj->verts[vidx][findIntersection];
@@ -1797,7 +1798,7 @@ double findVerticalIntersection_master(ObjFile *obj, Vert coords) {
         Vert medium = { 0., 0., 0. };
         double totDist = 0.;
         for( int v=0 ; v<obj->faces[i].nodes ; v++ ) {
-            int vidx = obj->faces[i].Node[v];
+            int vidx = obj->faces[i].Node[v][0];
             coords[zCoord] = obj->verts[vidx][zCoord];
             double dist = Distance(coords,obj->verts[vidx]);
             if ( dist<1e8 ) return obj->verts[vidx][zCoord];
@@ -1818,7 +1819,7 @@ double findVerticalIntersection(ObjFile *obj, Vert coords) {
     // simplified version
     
     int zCoord = 3-findIntersection;
-    int vidx = getVertexIdx(obj, 0, 0, coords[0], coords[findIntersection]);
+    int vidx = getVertexIdx(obj, 0, findIntersection, coords[0], coords[findIntersection]);
     if ( vidx<0 ) return 0.;
     
     return obj->verts[vidx][zCoord];
@@ -2055,7 +2056,7 @@ int GetOptions(int argc, char** argv) {
             i++;
             Vertical[0] = atof(argv[i]);
             i++;
-            Vertical[1] = atof(argv[i]);
+            Vertical[findIntersection] = atof(argv[i]);
             break;
 		case 'g':
 		    i++;
@@ -2081,6 +2082,9 @@ int GetOptions(int argc, char** argv) {
 		    break;
 		case 'v':
 		    Verbose += 1;
+		    break;
+		case 'q':
+		    Verbose = -1;
 		    break;
 		case 'n':
 		    Negate = 1;
@@ -2210,7 +2214,8 @@ int getVertexIdx(ObjFile *obj, int xCoord, int yCoord, double x, double y) {
     int minI = -1;
     double minD = 1e8;
     
-    printf("looking for vertex %f %f ...", x,y);
+    if ( Verbose>2 )
+        fprintf(stderr,"Looking for vertex %f %f ...", x,y);
     for( int i=0 ; i<obj->stats.verts ; i++ ) {
         double distX = obj->verts[i][xCoord] - x;
         double distY = obj->verts[i][yCoord] - y;
@@ -2220,8 +2225,10 @@ int getVertexIdx(ObjFile *obj, int xCoord, int yCoord, double x, double y) {
             minI = i;
         }
     }
-    if (minI>=0) printf("found vertex %d at dist %f\n", minI, minD);
-    else printf("erro\n");
+    if ( Verbose>2 ) {
+        if (minI>=0) fprintf(stderr,"found vertex %d at dist %f\n", minI, minD);
+        else fprintf(stderr,"erro\n");
+    }
     return minI;
 }
 
@@ -2314,22 +2321,24 @@ void SaveImageMap(char *OutputFile, ObjFile *obj) {
 
 
 int main(int argc, char **argv) {
-
-	fprintf(stderr,"# ObjTool Compile date: %s\n", CDATE);
-
+/*
 	if ( argc<=1 ) {
 		Usage();
 		exit(1);
 	}
+	
+*/
 	int fi = GetOptions(argc,argv);
-	//printf("# fi = %d, argc=%d\n",fi,argc);
+    if ( Verbose>=0 )
+        fprintf(stderr,"# ObjTool\n# Compile date: %s\n", CDATE);
+    
+    //printf("# fi = %d, argc=%d\n",fi,argc);
 
 	if ( fi>=argc ) {
 	    fprintf(stderr,"Al least one input file must be specified.\n");
 	    Usage();
 	    exit(1);
 	}
-
 
 	// Alloc and load obj files
 	int NObjects = argc-fi;
@@ -2338,7 +2347,7 @@ int main(int argc, char **argv) {
 
 	int i = 0;
 	while ( fi<argc) {
-		fprintf(stderr,"Loading ObjFile '%s'\n", argv[fi]);
+		if ( Verbose>=0 ) fprintf(stderr,"Loading ObjFile '%s'\n", argv[fi]);
 		LoadObjFile(argv[fi], ObjSet+i);
 		SetUseCounters(ObjSet+i);
 		i++;
@@ -2361,7 +2370,7 @@ int main(int argc, char **argv) {
                     PrintObjStats(&(obj.stats));
             exit(0);
         }
-	if ( Verbose ) {
+	if ( Verbose>0 ) {
         if ( Verbose>3 )
             PrintFullObjStats(&obj);
         else
