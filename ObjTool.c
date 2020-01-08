@@ -1766,16 +1766,22 @@ void FilterVerts(ObjFile *obj, Vert min, Vert max) {
 	}
 }
 
-double findVerticalIntersection(ObjFile *obj, Vert coords) {
+double findVerticalIntersection_master(ObjFile *obj, Vert coords) {
+    // master version
+    // under development
     int i;
     int zCoord = 3-findIntersection;
+    printf("Finding verticasl intersection %f %f %f\n", coords[0], coords[1], coords[2]);
     for( i=0 ; i<obj->stats.faces ; i++ ) {
+        printf("  testing face %d with %d nodes\n", i, obj->faces[i].nodes  );
         float xMin =  1e8;
         float xMax = -1e8;
         float yMin =  1e8;
         float yMax = -1e8;
         for( int v=0 ; v<obj->faces[i].nodes ; v++ ) {
+            printf("    testing node %d\n", v);
             int vidx = obj->faces[i].Node[v];
+            printf("    testing node %d, vidx=%d\n", v, vidx);
             float vx = obj->verts[vidx][0];
             float vy = obj->verts[vidx][findIntersection];
             if ( vx<xMin ) xMin = vx;
@@ -1786,6 +1792,8 @@ double findVerticalIntersection(ObjFile *obj, Vert coords) {
         if ( coords[0]<xMin || coords[0]>xMax ) continue;
         if ( coords[1]<yMin || coords[1]>yMax ) continue;
         // face intersected.
+        
+        printf("    face intersected !! \n");
         Vert medium = { 0., 0., 0. };
         double totDist = 0.;
         for( int v=0 ; v<obj->faces[i].nodes ; v++ ) {
@@ -1805,6 +1813,19 @@ double findVerticalIntersection(ObjFile *obj, Vert coords) {
     // No intersetion found.
     return 0.;
 }
+
+double findVerticalIntersection(ObjFile *obj, Vert coords) {
+    // simplified version
+    
+    int zCoord = 3-findIntersection;
+    int vidx = getVertexIdx(obj, 0, 0, coords[0], coords[findIntersection]);
+    if ( vidx<0 ) return 0.;
+    
+    return obj->verts[vidx][zCoord];
+    
+}
+
+
 
 void ProcVerts(ObjFile *obj) {
 	// Apply transformations to vertexs
@@ -2024,8 +2045,10 @@ int GetOptions(int argc, char** argv) {
             switch (argv[i][2]) {
                 case 'z':
                     findIntersection = 1;
+                    break;
                 case 'y':
                     findIntersection = 2;
+                    break;
                 default:
                     InvalidOption(argv[i]);
             }
@@ -2187,7 +2210,7 @@ int getVertexIdx(ObjFile *obj, int xCoord, int yCoord, double x, double y) {
     int minI = -1;
     double minD = 1e8;
     
-    printf("looking for vertext %f %f ...", x,y);
+    printf("looking for vertex %f %f ...", x,y);
     for( int i=0 ; i<obj->stats.verts ; i++ ) {
         double distX = obj->verts[i][xCoord] - x;
         double distY = obj->verts[i][yCoord] - y;
