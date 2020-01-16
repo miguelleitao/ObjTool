@@ -4,7 +4,7 @@ CFLAGS=-Wall -O2 -I linmath -DCDATE="\"`date`\""
 
 all: ObjTool
 
-ObjTool: ObjTool.o
+ObjTool: ObjTool.o intersection.o
 	$(CC) -o $@ $^ -lm
 
 linmath:

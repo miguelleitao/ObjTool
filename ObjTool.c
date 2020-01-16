@@ -7,94 +7,7 @@
  * 	Not all OBJ file format specs are implemented.
  */
 
-#define VERSION 0.13.4
-#define _GNU_SOURCE
- 	
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
-#include <assert.h>
-
-#include "linmath.h"
-
-#define PI M_PI
-
-#define MAX_LINE_LEN (5880)
-#define MAX_FACE_NODES (380)
-
-#define MAX_FLOAT (1.0e32)
-
-#define NULL_IDX (-999999)
-
-#define MEM_META_INFO_SIZE (16)
-#define MEM_TAG (0x7a76b532)
-
-typedef struct ObjStatsStruct {
-	int verts;
-	int faces;
-	int norms;
-	int texts;
-	int paras;
-	int objs;
-	int grps;
-	int mats;
-	int libs;
-	int shds;
-	float vmin[3];
-	float vmax[3];
-	float tmin[2];
-	float tmax[2];
-} ObjStats;
-
-typedef struct UseCountStruct {
-	int *verts;
-	int *norms;
-	int *texts;
-/*
-	int *mats;
-	int *shds;
-	int *grps;
-	int *objs;  */
-} UseCounters;
-
-typedef int FaceNode[3];	// VeterxIdx TextureCoordIdx NormalIdx
-
-typedef float Vert[3];		// x y z
-
-typedef float Vec2[2];
-typedef float Vec3[3];
-//typedef FaceNode *Face;
-
-typedef struct FaceStruct {
-	int nodes;		// Number of Vertexs
-	FaceNode *Node;
-} Face;
-
-typedef struct ObjGroupStruct {
-	int line;
-	char *name;
-} ObjGroup;
-
-typedef float Norm[3];		// x y z
-typedef float Text[2];		// u v
-
-typedef struct ObjFileStruct {
-	Vert *verts;
-	Face *faces;
-	Norm *norms;
-	Text *texts;
-	Vert *paras;
-	ObjGroup *objs;
-	ObjGroup *grps;
-	ObjGroup *mats;
-	ObjGroup *libs;
-	ObjGroup *shds;
-	ObjStats stats;
-	UseCounters counts;
-	UseCounters order;
-} ObjFile;
-
+#include "ObjTool.h"
 
 // Globals
 
@@ -181,15 +94,6 @@ char *StrDup(char *strin) {
 	}
 	*strptr = 0;
 	return strout;
-}
-
-float Distance( Vert v1, Vert v2 ) {
-    double total = 0.;
-    for( int i=0 ; i<3 ; i++ ) {
-        double d = v1[i]-v2[i];
-        total += d*d;
-    }
-    return sqrt(total);
 }
 
 int ReadVec2f(char *str, float *data) {
@@ -1766,67 +1670,6 @@ void FilterVerts(ObjFile *obj, Vert min, Vert max) {
 	    }
 	}
 }
-
-double findVerticalIntersection_master(ObjFile *obj, Vert coords) {
-    // master version
-    // under development
-    int i;
-    int zCoord = 3-findIntersection;
-    printf("Finding verticasl intersection %f %f %f\n", coords[0], coords[1], coords[2]);
-    for( i=0 ; i<obj->stats.faces ; i++ ) {
-        printf("  testing face %d with %d nodes\n", i, obj->faces[i].nodes  );
-        float xMin =  1e8;
-        float xMax = -1e8;
-        float yMin =  1e8;
-        float yMax = -1e8;
-        for( int v=0 ; v<obj->faces[i].nodes ; v++ ) {
-            printf("    testing node %d\n", v);
-            int vidx = obj->faces[i].Node[v][0];
-            printf("    testing node %d, vidx=%d\n", v, vidx);
-            float vx = obj->verts[vidx][0];
-            float vy = obj->verts[vidx][findIntersection];
-            if ( vx<xMin ) xMin = vx;
-            if ( vx>xMax ) xMax = vx;
-            if ( vy<yMin ) yMin = vy;
-            if ( vy>yMax ) yMax = vy;
-        }
-        if ( coords[0]<xMin || coords[0]>xMax ) continue;
-        if ( coords[1]<yMin || coords[1]>yMax ) continue;
-        // face intersected.
-        
-        printf("    face intersected !! \n");
-        Vert medium = { 0., 0., 0. };
-        double totDist = 0.;
-        for( int v=0 ; v<obj->faces[i].nodes ; v++ ) {
-            int vidx = obj->faces[i].Node[v][0];
-            coords[zCoord] = obj->verts[vidx][zCoord];
-            double dist = Distance(coords,obj->verts[vidx]);
-            if ( dist<1e8 ) return obj->verts[vidx][zCoord];
-            double invDist = 1. / dist;
-            for( int i=0 ; i<3 ; i++ ) 
-                medium[i] += (obj->verts[vidx][i]) * invDist;
-            totDist += invDist;
-        }
-        for( i=0 ; i<3 ; i++ ) 
-            medium[i] /= totDist;
-        return medium[zCoord];
-    }
-    // No intersetion found.
-    return 0.;
-}
-
-double findVerticalIntersection(ObjFile *obj, Vert coords) {
-    // simplified version
-    
-    int zCoord = 3-findIntersection;
-    int vidx = getVertexIdx(obj, 0, findIntersection, coords[0], coords[findIntersection]);
-    if ( vidx<0 ) return 0.;
-    
-    return obj->verts[vidx][zCoord];
-    
-}
-
-
 
 void ProcVerts(ObjFile *obj) {
 	// Apply transformations to vertexs
