@@ -4,7 +4,7 @@ CFLAGS=-Wall -O2 -I linmath -DCDATE="\"`date`\""
 
 all: ObjTool
 
-ObjTool: ObjTool.o intersection.o
+ObjTool: ObjTool.o intersection.o load_obj.o
 	$(CC) -o $@ $^ -lm
 
 linmath:
@@ -18,7 +18,7 @@ clean:
 	$(RM) *.o ObjTool
 
 push:
-	git add ObjTool.c intersection.c ObjTool.h Makefile README.md
+	git add ObjTool.c intersection.c load_obj.c ObjTool.h Makefile README.md
 	git commit -m "update"
 	git push
 

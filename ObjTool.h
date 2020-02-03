@@ -136,3 +136,9 @@ void SetIndexs(ObjFile *obj);
 int getVertexIdx(ObjFile *obj, int xCoord, int yCoord, double x, double y);
 double findVerticalIntersection(ObjFile *obj, Vert coords);
 
+void ResetObjStats(ObjStats *os);
+void AllocObjFile(ObjFile *obj);
+void LoadObjFile(char *fname, ObjFile *obj);
+
+void *Malloc(int n, size_t dim);
+char *StrDup(char *strin);
