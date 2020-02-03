@@ -7,7 +7,7 @@
  * 	Not all OBJ file format specs are implemented.
  */
 
-#define VERSION 0.13.4
+#define VERSION 0.13.5
 
 #define _GNU_SOURCE
  	
@@ -59,12 +59,14 @@ typedef struct UseCountStruct {
 	int *objs;  */
 } UseCounters;
 
+typedef float Scalar;
+
 typedef int FaceNode[3];	// VeterxIdx TextureCoordIdx NormalIdx
 
-typedef float Vert[3];		// x y z
+typedef Scalar Vert[3];		// x y z
 
-typedef float Vec2[2];
-typedef float Vec3[3];
+typedef Scalar Vec2[2];
+typedef Scalar Vec3[3];
 //typedef FaceNode *Face;
 
 typedef struct FaceStruct {
@@ -77,8 +79,8 @@ typedef struct ObjGroupStruct {
 	char *name;
 } ObjGroup;
 
-typedef float Norm[3];		// x y z
-typedef float Text[2];		// u v
+typedef Scalar Norm[3];		// x y z
+typedef Scalar Text[2];		// u v
 
 typedef struct ObjFileStruct {
 	Vert *verts;
@@ -141,4 +143,5 @@ void AllocObjFile(ObjFile *obj);
 void LoadObjFile(char *fname, ObjFile *obj);
 
 void *Malloc(int n, size_t dim);
+void Free(void *p);
 char *StrDup(char *strin);

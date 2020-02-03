@@ -66,6 +66,28 @@ double findVerticalIntersection_master(ObjFile *obj, Vert coords) {
     return 0.;
 }
 
+int getVertexIdx(ObjFile *obj, int xCoord, int yCoord, double x, double y) {
+    int minI = -1;
+    double minD = 1e8;
+    
+    if ( Verbose>2 )
+        fprintf(stderr,"Looking for vertex %f %f ...", x,y);
+    for( int i=0 ; i<obj->stats.verts ; i++ ) {
+        double distX = obj->verts[i][xCoord] - x;
+        double distY = obj->verts[i][yCoord] - y;
+        double dist = distX*distX + distY*distY;
+        if ( dist<minD ) {
+            minD = dist;
+            minI = i;
+        }
+    }
+    if ( Verbose>2 ) {
+        if (minI>=0) fprintf(stderr,"found vertex %d at dist %f\n", minI, minD);
+        else fprintf(stderr,"erro\n");
+    }
+    return minI;
+}
+
 double findVerticalIntersection(ObjFile *obj, Vert coords) {
     // simplified version
     
@@ -76,3 +98,5 @@ double findVerticalIntersection(ObjFile *obj, Vert coords) {
     return obj->verts[vidx][zCoord];
     
 }
+
+

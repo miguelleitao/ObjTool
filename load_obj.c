@@ -10,15 +10,53 @@
 #include "ObjTool.h"
 
 
+void *Malloc(int n, size_t dim) {
+	long size = n*dim;
+	void *buf = malloc(size+MEM_META_INFO_SIZE);
+	if ( ! buf ) {
+		fprintf(stderr,"Cannot alloc memory\n");
+		exit(3);
+	}
+	*((long *)buf) = MEM_TAG;
+	*((long *)(buf+8)) = (long)(size+MEM_META_INFO_SIZE);
+	memset(buf+MEM_META_INFO_SIZE,0,size);
+	return buf+MEM_META_INFO_SIZE;
+}
 
+void Free(void *p) {
+    if ( ! p ) {
+        if ( Verbose>=0 ) fprintf(stderr,"Cannot free unallocated memory\n");
+        return;
+    }
+	long *tag_p = p-MEM_META_INFO_SIZE;
+	if ( *tag_p == MEM_TAG ) {
+		*tag_p = 0L;
+		free(p-MEM_META_INFO_SIZE);
+	}
+//printf("Memory freed\n");
+//else printf("##Memory not freed\n");
+}
 
-int ReadVec2f(char *str, float *data) {
+char *StrDup(char *strin) {
+	char *strout = strdup(strin);
+	char *strptr = strout;
+	while( *strptr ) {
+		if ( *strptr=='\n' ) break;
+		if ( *strptr=='\r' ) break;
+		if ( *strptr=='\t' ) break;
+		strptr++;
+	}
+	*strptr = 0;
+	return strout;
+}
+
+static int ReadVec2f(char *str, float *data) {
 	int res;
 	res = sscanf(str,"%f %f", data+0, data+1);
 	return res;
 }
 
-int ReadVec3f(char *str, float *data) {
+static int ReadVec3f(char *str, float *data) {
 	int res;
 	res = sscanf(str,"%f %f %f", data+0, data+1, data+2);
 	return res;

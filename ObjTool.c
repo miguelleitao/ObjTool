@@ -56,47 +56,6 @@ char* strrstr(char *Str, const char *SubStr)
     return NULL;    
 }
 
-void *Malloc(int n, size_t dim) {
-	long size = n*dim;
-	void *buf = malloc(size+MEM_META_INFO_SIZE);
-	if ( ! buf ) {
-		fprintf(stderr,"Cannot alloc memory\n");
-		exit(3);
-	}
-	*((long *)buf) = MEM_TAG;
-	*((long *)(buf+8)) = (long)(size+MEM_META_INFO_SIZE);
-	memset(buf+MEM_META_INFO_SIZE,0,size);
-	return buf+MEM_META_INFO_SIZE;
-}
-
-void Free(void *p) {
-    if ( ! p ) {
-        if ( Verbose>=0 ) fprintf(stderr,"Cannot free unallocated memory\n");
-        return;
-    }
-	long *tag_p = p-MEM_META_INFO_SIZE;
-	if ( *tag_p == MEM_TAG ) {
-		*tag_p = 0L;
-		free(p-MEM_META_INFO_SIZE);
-	}
-//printf("Memory freed\n");
-//else printf("##Memory not freed\n");
-}
-
-char *StrDup(char *strin) {
-	char *strout = strdup(strin);
-	char *strptr = strout;
-	while( *strptr ) {
-		if ( *strptr=='\n' ) break;
-		if ( *strptr=='\r' ) break;
-		if ( *strptr=='\t' ) break;
-		strptr++;
-	}
-	*strptr = 0;
-	return strout;
-}
-
-
 
 int VertIndex(ObjFile *obj, int i, int total) {
     if ( Relative )
@@ -1773,27 +1732,7 @@ void genTextureCoords() {
 
 }
 
-int getVertexIdx(ObjFile *obj, int xCoord, int yCoord, double x, double y) {
-    int minI = -1;
-    double minD = 1e8;
-    
-    if ( Verbose>2 )
-        fprintf(stderr,"Looking for vertex %f %f ...", x,y);
-    for( int i=0 ; i<obj->stats.verts ; i++ ) {
-        double distX = obj->verts[i][xCoord] - x;
-        double distY = obj->verts[i][yCoord] - y;
-        double dist = distX*distX + distY*distY;
-        if ( dist<minD ) {
-            minD = dist;
-            minI = i;
-        }
-    }
-    if ( Verbose>2 ) {
-        if (minI>=0) fprintf(stderr,"found vertex %d at dist %f\n", minI, minD);
-        else fprintf(stderr,"erro\n");
-    }
-    return minI;
-}
+
 
 void SaveImageMap(char *OutputFile, ObjFile *obj) {
     int nVerts = obj->stats.verts;
