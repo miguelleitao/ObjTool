@@ -43,15 +43,22 @@ double findVerticalIntersection_master(ObjFile *obj, Vert coords) {
         }
         if ( coords[0]<xMin || coords[0]>xMax ) continue;
         if ( coords[1]<yMin || coords[1]>yMax ) continue;
-        // face intersected.
+        // This is an aproximation.
+        // Intersetion test was performed obly with the axis aligned bounding rectangle.
+        // Works well if face is an axis ligned rectangle.
         
+        // Face intersected !!
         printf("    face intersected !! \n");
-        Vert medium = { 0., 0., 0. };
+        
+        // Now zelect Z by the weighted average of Zi from all vertexes.
+        // Zi are weigthed by the inverse horizontal distance.
+        
+        Vert medium = { 0., 0., 0. };	// Medium point.
         double totDist = 0.;
         for( int v=0 ; v<obj->faces[i].nodes ; v++ ) {
             int vidx = obj->faces[i].Node[v][0];
             coords[zCoord] = obj->verts[vidx][zCoord];
-            double dist = Distance(coords,obj->verts[vidx]);
+            double dist = Distance(coords, obj->verts[vidx]);
             if ( dist<1e8 ) return obj->verts[vidx][zCoord];
             double invDist = 1. / dist;
             for( int i=0 ; i<3 ; i++ ) 
