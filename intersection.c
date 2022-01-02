@@ -7,6 +7,7 @@
 
 #define _GNU_SOURCE
  	
+#include <stdbool.h>
 #include "ObjTool.h"
 
 float Distance( Vert v1, Vert v2 ) {
@@ -16,6 +17,45 @@ float Distance( Vert v1, Vert v2 ) {
         total += d*d;
     }
     return sqrt(total);
+}
+
+double signed_tetra_volume( Vert a, Vert b, Vert c, Vert d) {
+    Vert t1, t2, t3, tc;
+    vec3_subed(t1, b, a);
+    vec3_subed(t2, c, a);
+    vec3_subed(t3, d, a);
+    vec3_cross(tc, t1, t2);
+    return vec3_dot(tc, t3) / 6.;
+}
+
+int sign(double n) {
+    if ( n>0. ) return  1;
+    if ( n<0. ) return -1;
+    return 0;
+}
+
+int tetra_volume_sign(Vert a, Vert b, Vert c, Vert d) {
+    return sign( signed_tetra_volume( a, b, c, d) );
+}
+    
+int intersect_line_triangle(Vert q1, Vert q2, Vert p1, Vert p2, Vert p3) {
+    int s1 = tetra_volume_sign(q1,p1,p2,p3);
+    int s2 = tetra_volume_sign(q2,p1,p2,p3);
+    
+    if ( s1 == s2 ) return false;
+    
+    int s3 = tetra_volume_sign(q1,q2,p1,p2);
+    int s4 = tetra_volume_sign(q1,q2,p2,p3);
+    int s5 = tetra_volume_sign(q1,q2,p3,p1);
+    
+    if ( s3!=s4 ) return false;
+    if ( s4!=s5 ) return false;
+    // Intersection
+    // Intersection point (P) is:
+    //    n = np.cross(p2-p1,p3-p1)
+    //    t = np.dot(p1-q1,n) / np.dot(q2-q1,n)
+    //    P = q1 + t * (q2-q1)
+    return true;
 }
 
 double findVerticalIntersection_master(ObjFile *obj, Vert coords) {
@@ -44,8 +84,11 @@ double findVerticalIntersection_master(ObjFile *obj, Vert coords) {
         if ( coords[0]<xMin || coords[0]>xMax ) continue;
         if ( coords[1]<yMin || coords[1]>yMax ) continue;
         // This is an aproximation.
-        // Intersetion test was performed obly with the axis aligned bounding rectangle.
-        // Works well if face is an axis ligned rectangle.
+        // Intersetion test was performed only with the axis aligned bounding rectangle.
+        // Works well if face is an axis aligned rectangle.
+        
+        
+        
         
         // Face intersected !!
         printf("    face intersected !! \n");
