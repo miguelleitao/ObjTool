@@ -109,9 +109,9 @@ void PrintLongObjStats(ObjFile *obj) {
 	for( i=0 ; i<obj->stats.objs ; i++ )
             printf("objs[%d]: %d : %s\n", i+1, obj->objs[i].line, obj->objs[i].name);
 	for( i=0 ; i<obj->stats.grps ; i++ )
-            printf("grps[%d]: %d : %s\n", i+1, obj->grps[i].line, obj->grps[i].name);
-            
+            printf("grps[%d]: %d : %s\n", i+1, obj->grps[i].line, obj->grps[i].name);           
 }
+
 void PrintFullObjStats(ObjFile *obj) {
 	PrintObjStats(&(obj->stats));
 	int i;
@@ -950,10 +950,12 @@ ObjFile *CreateShadowObj_Projection(ObjFile *obj) {
 
 
 void SaveObjFile(char *fname, ObjFile *obj) {
+    printf("saving\n");
 	FILE *fout;
 	fout = stdout;
 	int i;
 	int nv=0, nt=0, nn=0;
+	
 	if ( fname && *fname ) {
 		printf("Writing file '%s'\n",fname);
 		fout = fopen(fname,"w");
@@ -1186,6 +1188,7 @@ void FreeObjFile(ObjFile *obj) {
 }
 
 
+
 void SetUseCounters(ObjFile *obj) {
 	// Counts uses of each vertex, norm and texture coord.
 	// results are stored in obj->counts structure
@@ -1350,29 +1353,64 @@ void FilterVerts(ObjFile *obj, Vert min, Vert max) {
 	}
 }
 
+
+void  vertCrossProduct(ObjFile *obj, int nFace, int n0, Vert cross) {
+    // Dot product of edges in vertex (n0+1)
+    // returns 0 when edges are colinear   
+    
+    Face face = obj->faces[nFace];
+    int n1 = (n0+1) % face.nodes;
+    int n2 = (n0+2) % face.nodes;
+    int i0 = face.Node[n0][0];
+    int i1 = face.Node[n1][0];
+    int i2 = face.Node[n2][0];
+
+    if ( i1<1 || i1>obj->stats.verts ) 
+            return;
+    if ( i2<1 || i2>obj->stats.verts ) 
+	    return;	
+
+    vec3f v0, v1, v2;
+    vec3f_copy(v0, obj->verts[i0-1]);
+    vec3f_copy(v1, obj->verts[i1-1]);
+    vec3f_copy(v2, obj->verts[i2-1]);
+    
+    //printf("        v0 %f,%f,%f\n", v0[0],v0[1],v0[2]);
+    //printf("        v1 %f,%f,%f\n", v1[0],v1[1],v1[2]);
+    //printf("        v2 %f,%f,%f\n", v2[0],v2[1],v2[2]);
+    
+    Vert A, B;
+    vec3_subed(A, v1, v0);
+    vec3_subed(B, v2, v1); 
+    
+    //printf("      A %f,%f,%f\n", A[0],A[1],A[2]);
+    //printf("      B %f,%f,%f\n", B[0],B[1],B[2]);
+    vec3_cross(cross, A, B);   
+}
+
 void ProcVerts(ObjFile *obj) {
 	// Apply transformations to vertexs
 	// Transformations orders is: Scale / Translation / Rotation
 	int i, c;
 	for( i=0 ; i<obj->stats.verts ; i++ ) {
 	    if ( obj->counts.verts[i] > 0 ) {
-            for( c=0 ; c<3 ; c++ ) {
-                obj->verts[i][c] *= Scale[c];
-                obj->verts[i][c] += Translate[c];
-            }
-            float x,y,z;
-            x = obj->verts[i][0];
-            y = obj->verts[i][1];
-            obj->verts[i][0] =  x*CosF(Rotate[2]) - y*SinF(Rotate[2]);
-            obj->verts[i][1] =  x*SinF(Rotate[2]) + y*CosF(Rotate[2]);
-            x = obj->verts[i][0];
-            z = obj->verts[i][2];
-            obj->verts[i][0] =  x*CosF(Rotate[1]) + z*SinF(Rotate[1]);
-                    obj->verts[i][2] = -x*SinF(Rotate[1]) + z*CosF(Rotate[1]);
-            y = obj->verts[i][1];
-            z = obj->verts[i][2];
-            obj->verts[i][1] =  y*CosF(Rotate[0]) - z*SinF(Rotate[0]);
-            obj->verts[i][2] =  y*SinF(Rotate[0]) + z*CosF(Rotate[0]);
+		    for( c=0 ; c<3 ; c++ ) {
+		        obj->verts[i][c] *= Scale[c];
+		        obj->verts[i][c] += Translate[c];
+		    }
+		    float x,y,z;
+		    x = obj->verts[i][0];
+		    y = obj->verts[i][1];
+		    obj->verts[i][0] =  x*CosF(Rotate[2]) - y*SinF(Rotate[2]);
+		    obj->verts[i][1] =  x*SinF(Rotate[2]) + y*CosF(Rotate[2]);
+		    x = obj->verts[i][0];
+		    z = obj->verts[i][2];
+		    obj->verts[i][0] =  x*CosF(Rotate[1]) + z*SinF(Rotate[1]);
+		    obj->verts[i][2] = -x*SinF(Rotate[1]) + z*CosF(Rotate[1]);
+		    y = obj->verts[i][1];
+		    z = obj->verts[i][2];
+		    obj->verts[i][1] =  y*CosF(Rotate[0]) - z*SinF(Rotate[0]);
+		    obj->verts[i][2] =  y*SinF(Rotate[0]) + z*CosF(Rotate[0]);
 	    }
 	}
 
@@ -1386,14 +1424,77 @@ void ProcVerts(ObjFile *obj) {
 		x = obj->norms[i][0];
 		z = obj->norms[i][2];
 		obj->norms[i][0] =  x*CosF(Rotate[1]) + z*SinF(Rotate[1]);
-        obj->norms[i][2] = -x*SinF(Rotate[1]) + z*CosF(Rotate[1]);
+        	obj->norms[i][2] = -x*SinF(Rotate[1]) + z*CosF(Rotate[1]);
 		y = obj->norms[i][1];
 		z = obj->norms[i][2];
 		obj->norms[i][1] =  y*CosF(Rotate[0]) - z*SinF(Rotate[0]);
-        obj->norms[i][2] =  y*SinF(Rotate[0]) + z*CosF(Rotate[0]);
-		if ( InvertNormals )
+        	obj->norms[i][2] =  y*SinF(Rotate[0]) + z*CosF(Rotate[0]);
+        	/*
+		if ( InvertNormals==1 )
 		    for( c=0 ; c<3 ; c++)
 		        obj->norms[i][c] *= -1.;
+		        */
+	}
+	printf("InvertNormals: %d\n", InvertNormals);
+	switch( InvertNormals ) {
+	    case 1:
+	        for( i=0 ; i<obj->stats.norms ; i++ ) 
+	            for( c=0 ; c<3 ; c++)
+		        obj->norms[i][c] *= -1.;
+		break;
+	    case 2:
+	    case 3:
+	    case 4:
+	        for( i=0 ; i<obj->stats.faces ; i++ ) {
+	            vec3f polyCross;
+	            vec3f_set(polyCross, 0., 0., 0.);
+	            vec3f polyNormal;
+	            vec3f_set(polyNormal, 0., 0., 0.);
+	            for( int n=0 ; n<obj->faces[i].nodes ; n++ ) {
+	                Vert vertCross;
+	                vertCrossProduct(obj, i, n, vertCross);
+	                
+	            printf("    vert %d Cross %f,%f,%f\n", n, vertCross[0],vertCross[1],vertCross[2]);
+	                vec3_add(polyCross, vertCross);
+	                int iNormal = obj->faces[i].Node[n][2];
+	                printf("      iNormal %d\n", iNormal);
+	                vec3f vertNormal;
+	                vec3f_copy(vertNormal, obj->norms[iNormal-1]);
+	                if ( InvertNormals & 0b0010 ) {
+	                    // Compare and correct Normal at vertex.
+	                    float vDir = vec3_dot(vertNormal, vertCross);
+	                    if ( vDir < 0. ) {
+	                    	// printf("  Invertendo normal %d\n", iNormal);
+	                        vec3_invert(obj->norms[iNormal-1]);
+	                        vec3f_copy(vertNormal, obj->norms[iNormal-1]);
+	                    }
+	                }
+	                vec3f_add(polyNormal, vertNormal);
+	            }
+	            //printf(" polyNormal %f,%f,%f\n", polyNormal[0],polyNormal[1],polyNormal[2]);
+	            //printf(" polyCross %f,%f,%f\n", polyCross[0],polyCross[1],polyCross[2]);
+	            float fDir = vec3_dot(polyNormal, polyCross);
+	            //printf("fdir = %f\n", fDir);
+	            if ( fDir < 0. ) {
+	            	// poligono invertido.
+	            	if ( InvertNormals & 0b0100 ) {
+	            	    // Inverte ordem dos vertices da face
+	            	    //printf("invertendo ordem do poligono %d\n", i);
+	            	    int n1, n2;
+	            	    for( n1=0, n2=obj->faces[i].nodes-1 ; n1<n2 ; n1++, n2-- ) {
+	            	        int temp;
+	            	        //printf("  invertendo ordem do poligono %d, n1:%d, n2:%d \n", i, n1, n2);
+	            	        for( int r=0 ; r<3 ; r++ ) {
+	            	            temp = obj->faces[i].Node[n1][r];
+	            	            obj->faces[i].Node[n1][r] = obj->faces[i].Node[n2][r];
+	            	            obj->faces[i].Node[n2][r] = temp;
+	            	        }
+	            	    }
+	            	}
+	            }
+	        }
+	        break;
+
 	}
 }
 
@@ -1420,15 +1521,17 @@ void Usage() {
     fprintf(stderr,"\t\t-rx ang		   rotate ang degrees around xx axis\n");
     fprintf(stderr,"\t\t-ry ang		   rotate ang degrees around yy axis\n");
     fprintf(stderr,"\t\t-rz ang		   rotate ang degrees around zz axis\n");
-    fprintf(stderr,"\t\t-N     	   invert normals\n");
+    fprintf(stderr,"\t\t-Ni    		   invert all normals\n");
+    fprintf(stderr,"\t\t-Nc    		   invert wrong facing normals\n");
+    fprintf(stderr,"\t\t-Ns    		   resort face vertexes to match normal\n");
     fprintf(stderr,"\t\t-R                 use relative coords\n");
-    fprintf(stderr,"\t\t-M		   Do not output mtllib directives\n");
+    fprintf(stderr,"\t\t-M		   do not output mtllib directives\n");
     fprintf(stderr,"\t\t-c                 solid cut\n");
     fprintf(stderr,"\t\t-n		   negate face filter condition( -g,-m )\n");
     fprintf(stderr,"\t\t-fz x y		   find Z coord for x,y vertical\n");
     fprintf(stderr,"\t\t-fy x z		   find Y coord for x,z vertical\n");
     fprintf(stderr,"\t\t-O outfile         output to outfile (default: stdout)\n");
-    fprintf(stderr,"\t\t-e		   Explode outfile into single objects\n");
+    fprintf(stderr,"\t\t-e		   explode outfile into single objects\n");
     fprintf(stderr,"\t\t-S shadow_file     shadow output to shadow_file (default: no shadow ouput)\n\n");
 }
 
@@ -1536,54 +1639,66 @@ int GetOptions(int argc, char** argv) {
 			    InvalidOption(argv[i]);
 		    }
 		    break;
-        case 'r':
+        	case 'r':
 		    switch (argv[i][2]) {
-                case 'x':
-                    i++;
-                    Rotate[0] = PI*atof(argv[i])/180.;
-                    break;
-                case 'y':
-                    i++;
-                    Rotate[1] = PI*atof(argv[i])/180.;
-                    break;
-                case 'z':
-                    i++;
-                    Rotate[2] = PI*atof(argv[i])/180.;
-                    break;
-                case ' ':
-                case '\0':
-                default:
-                    InvalidOption(argv[i]);
-            }
-            break;
+                	case 'x':
+       	            	    i++;
+                    	    Rotate[0] = PI*atof(argv[i])/180.;
+                    	    break;
+                	case 'y':
+                    	    i++;
+                    	    Rotate[1] = PI*atof(argv[i])/180.;
+                    	    break;
+                	case 'z':
+                    	    i++;
+                     	    Rotate[2] = PI*atof(argv[i])/180.;
+                    	    break;
+                	case ' ':
+                	case '\0':
+                	default:
+                    	    InvalidOption(argv[i]);
+            	    }
+            	    break;
 		case 'm':
 		    i++;
 		    Material = argv[i];
 		    break;
-        case 'N':
-            InvertNormals = 1;
-            break;
-        case 'f':
-            // Find intersection
-            switch (argv[i][2]) {
-                case 'z':
-                    findIntersection = 1;
-                    break;
-                case 'y':
-                    findIntersection = 2;
-                    break;
-                default:
-                    InvalidOption(argv[i]);
-            }
-            i++;
-            Vertical[0] = atof(argv[i]);
-            i++;
-            Vertical[findIntersection] = atof(argv[i]);
-            break;
+        	case 'N':
+      	            switch (argv[i][2] ) {
+            		case 'i':
+            		    InvertNormals = 1;
+            		    break;
+            		case 'c':
+            		    InvertNormals = 2;
+            		    break;
+            		case 's':
+            	    	    InvertNormals = 4;
+            	    	    break;
+            		default:
+                    	    InvalidOption(argv[i]);
+            	    }    	    
+            	    break;
+        	case 'f':
+            	    // Find intersection
+            	    switch (argv[i][2]) {
+                	case 'z':
+                	    findIntersection = 1;
+                	    break;
+                	case 'y':
+                	    findIntersection = 2;
+                	    break;
+                	default:
+                    	    InvalidOption(argv[i]);
+            	    }
+            	    i++;
+            	    Vertical[0] = atof(argv[i]);
+            	    i++;
+            	    Vertical[findIntersection] = atof(argv[i]);
+            	    break;
 		case 'g':
-		    i++;
-		    SelectGroup[SelGroups++] = argv[i];
-		    break;
+	    	    i++;
+	    	    SelectGroup[SelGroups++] = argv[i];
+	    	    break;
 		case 'o':
 		    i++;
 		    SelectObject[SelObjects++] = argv[i];
@@ -1873,11 +1988,12 @@ int main(int argc, char **argv) {
             exit(0);
         }
 	if ( Verbose>0 ) {
-        if ( Verbose>3 )
-            PrintFullObjStats(&obj);
-        else
-            PrintObjStats(&(obj.stats));
-    }
+            if ( Verbose>3 )
+                PrintFullObjStats(&obj);
+            else
+                PrintObjStats(&(obj.stats));
+            printf("# End stats\n");
+        }
     
     if ( findIntersection==1 ) {
         double z = findVerticalIntersection(&obj,Vertical);
@@ -1889,37 +2005,42 @@ int main(int argc, char **argv) {
         printf("%lf\n", y);
         exit(0);
     }
-	FilterVerts( &obj, VMin, VMax );
+    FilterVerts( &obj, VMin, VMax );
+printf("Filtrou verts\n");
+    //SetIndexs(&obj);
+    CleanFaces(&obj);
 
-	//SetIndexs(&obj);
-	CleanFaces(&obj);
-
-	SetUseCounters(&obj);
-	ProcVerts( &obj );
-	SetIndexs(&obj);
-	if ( Explode )
+printf("Filtrou verts\n");
+    SetUseCounters(&obj);
+    ProcVerts( &obj );
+printf("Processou verts\n");
+    SetIndexs(&obj);
+printf("criou idxs\n");
+    if ( Explode )
 		ExplodeOutputFile(OutputFile, &obj);
-	else {
-        if ( strrstr(OutputFile, ".pgm") ) 
+    else {
+        printf("vai gravar\n");
+        if ( OutputFile && strrstr(OutputFile, ".pgm") ) 
             SaveImageMap(OutputFile, &obj);
         else
             SaveObjFile(OutputFile, &obj);
     }
-	if ( ShadowOutputFile ) {
-            printf("shadow\n");
-			//ObjFile *Shadow = CreateShadowObj(&obj);
-                        ObjFile *Shadow = CreateShadowObj(&obj);
-                        SetUseCounters(Shadow);
-                        SetIndexs(Shadow);
+    if ( ShadowOutputFile ) {
+        printf("shadow\n");
+	//ObjFile *Shadow = CreateShadowObj(&obj);
+        ObjFile *Shadow = CreateShadowObj(&obj);
+        SetUseCounters(Shadow);
+        SetIndexs(Shadow);
 PrintObjStats(&(Shadow->stats));
-			SaveObjFile(ShadowOutputFile, Shadow);
+	SaveObjFile(ShadowOutputFile, Shadow);
 printf("saved\n");
-			FreeObjFile(Shadow);
-			printf("Shadow file freed\n");
-	}
-	FreeObjFile(&obj);
-
-
+	FreeObjFile(Shadow);
+	printf("Shadow file freed\n");
+    }
+printf("vai limpar verts\n");
+    FreeObjFile(&obj);
+    
+printf("limpou verts\n");
 	return 0;
 }
 		
