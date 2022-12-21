@@ -7,6 +7,9 @@ all: ObjTool
 ObjTool: ObjTool.o intersection.o load_obj.o
 	$(CC) -o $@ $^ -lm
 
+ObjTool.o: ObjTool.c linmath/linmath.h
+	$(CC) -c ${CFLAGS} $<
+
 linmath:
 	git submodule init
 	git submodule update
