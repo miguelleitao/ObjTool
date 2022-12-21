@@ -1435,16 +1435,14 @@ void ProcVerts(ObjFile *obj) {
 		        obj->norms[i][c] *= -1.;
 		        */
 	}
-	printf("InvertNormals: %d\n", InvertNormals);
-	switch( InvertNormals ) {
-	    case 1:
+	
+	if ( InvertNormals & 0b001 ) {
 	        for( i=0 ; i<obj->stats.norms ; i++ ) 
 	            for( c=0 ; c<3 ; c++)
 		        obj->norms[i][c] *= -1.;
-		break;
-	    case 2:
-	    case 3:
-	    case 4:
+	}
+	
+	if ( InvertNormals & 0b110 ) {
 	        for( i=0 ; i<obj->stats.faces ; i++ ) {
 	            vec3f polyCross;
 	            vec3f_set(polyCross, 0., 0., 0.);
@@ -1453,11 +1451,10 @@ void ProcVerts(ObjFile *obj) {
 	            for( int n=0 ; n<obj->faces[i].nodes ; n++ ) {
 	                Vert vertCross;
 	                vertCrossProduct(obj, i, n, vertCross);
-	                
-	            printf("    vert %d Cross %f,%f,%f\n", n, vertCross[0],vertCross[1],vertCross[2]);
+	                //printf("    vert %d Cross %f,%f,%f\n", n, vertCross[0],vertCross[1],vertCross[2]);
 	                vec3_add(polyCross, vertCross);
 	                int iNormal = obj->faces[i].Node[n][2];
-	                printf("      iNormal %d\n", iNormal);
+	                //printf("      iNormal %d\n", iNormal);
 	                vec3f vertNormal;
 	                vec3f_copy(vertNormal, obj->norms[iNormal-1]);
 	                if ( InvertNormals & 0b0010 ) {
@@ -1492,9 +1489,8 @@ void ProcVerts(ObjFile *obj) {
 	            	    }
 	            	}
 	            }
+	            
 	        }
-	        break;
-
 	}
 }
 
