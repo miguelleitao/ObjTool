@@ -485,7 +485,7 @@ ObjFile *CreateShadowObj(ObjFile *obj) {
    }
    
    if ( shadow->stats.verts<3 ) {
-       fprintf(stderr,"Invalid shadow\n");
+       fprintf(stderr, "Invalid shadow\n");
        return shadow;
    }
    
@@ -548,48 +548,48 @@ ObjFile *CreateShadowObj_Projection(ObjFile *obj) {
 
     shadow->stats.faces = 0;
 
-        // Add one normal
-        shadow->stats.norms = 1;	// Only one norm, facing up.
-	shadow->norms = Malloc(1, sizeof(Norm));
-	shadow->norms[0][0] = 0.;
-	shadow->norms[0][ycoord] = 0.;
-	shadow->norms[0][zcoord] = 1.;	// Up vector
+    // Add one normal
+    shadow->stats.norms = 1;	// Only one norm, facing up.
+    shadow->norms = Malloc(1, sizeof(Norm));
+    shadow->norms[0][0] = 0.;
+    shadow->norms[0][ycoord] = 0.;
+    shadow->norms[0][zcoord] = 1.;	// Up vector
 	
-	    // Add two texture coords
-	shadow->stats.texts = 2;
-	shadow->texts = Malloc(shadow->stats.texts, sizeof(Text));
-	shadow->texts[0][0] = 0.01;
-	shadow->texts[0][1] = 0.01;
-	shadow->texts[1][0] = 0.91;
-	shadow->texts[1][1] = 0.91;
+    // Add two texture coords
+    shadow->stats.texts = 2;
+    shadow->texts = Malloc(shadow->stats.texts, sizeof(Text));
+    shadow->texts[0][0] = 0.01;
+    shadow->texts[0][1] = 0.01;
+    shadow->texts[1][0] = 0.91;
+    shadow->texts[1][1] = 0.91;
     
-        // Add one MtlLib
+    // Add one MtlLib
     shadow->stats.libs = 1;
-	shadow->libs = Malloc(shadow->stats.libs, sizeof(ObjGroup));
+    shadow->libs = Malloc(shadow->stats.libs, sizeof(ObjGroup));
     shadow->libs[0].line = 0;       // before all faces
     shadow->libs[0].name = "shadow.mtl";
     
     // Add one Material
     shadow->stats.mats = 1;
-	shadow->mats = Malloc(shadow->stats.mats, sizeof(ObjGroup));
+    shadow->mats = Malloc(shadow->stats.mats, sizeof(ObjGroup));
     shadow->mats[0].line = 0;       // before all faces
     shadow->mats[0].name = "shadow";
 
-	shadow->grps = NULL;
-	shadow->objs = NULL;
-	shadow->shds = NULL;
+    shadow->grps = NULL;
+    shadow->objs = NULL;
+    shadow->shds = NULL;
 
-	shadow->counts.verts = NULL;
-	shadow->counts.norms = NULL;
-	shadow->counts.texts = NULL;
+    shadow->counts.verts = NULL;
+    shadow->counts.norms = NULL;
+    shadow->counts.texts = NULL;
 
     shadow->order.verts = NULL;
-	shadow->order.texts = NULL;
-	shadow->order.norms = NULL;
+    shadow->order.texts = NULL;
+    shadow->order.norms = NULL;
         
-   // Find z min
-   float zmin = MAX_FLOAT;
-   for( i=0 ; i<obj->stats.verts ; i++ )
+    // Find z min
+    float zmin = MAX_FLOAT;
+    for( i=0 ; i<obj->stats.verts ; i++ )
 	if ( obj->verts[i][zcoord]<zmin )
 		zmin = obj->verts[i][zcoord];
 
@@ -600,16 +600,16 @@ ObjFile *CreateShadowObj_Projection(ObjFile *obj) {
         flags[i] = 0;
     */
 
-   // Find leftest vertex
-   float xmin = MAX_FLOAT;
-   float ymin = MAX_FLOAT;
-   int   vmin = -1;
-   int   fmin = -1;
-   //int   nmin = -1;
+    // Find leftest vertex
+    float xmin = MAX_FLOAT;
+    float ymin = MAX_FLOAT;
+    int   vmin = -1;
+    int   fmin = -1;
+    //int   nmin = -1;
 
-   int fi, ni;
-   for( fi=0 ; fi<obj->stats.faces ; fi++ )
-   for( ni=0 ; ni<obj->faces[fi].nodes ; ni++ ) {
+    int fi, ni;
+    for( fi=0 ; fi<obj->stats.faces ; fi++ )
+    for( ni=0 ; ni<obj->faces[fi].nodes ; ni++ ) {
 	int i = obj->faces[fi].Node[ni][0]-1;
 	if ( obj->verts[i][0]<xmin ) {
 		xmin = obj->verts[i][0];
@@ -618,32 +618,31 @@ ObjFile *CreateShadowObj_Projection(ObjFile *obj) {
 		fmin = fi;
 		//nmin = ni;
 	}
-   }
+    }
    
-   // Find surrounding convex polygon
-   // cursor variables. Register current point.
-   float xp = xmin;
-   float yp = ymin;
-   double ap = PI/2.;
-   int vp = vmin;
-   int fp = fmin;
-   //int np = nmin;
+    // Find surrounding convex polygon
+    // cursor variables. Register current point.
+    float xp = xmin;
+    float yp = ymin;
+    double ap = PI/2.;
+    int vp = vmin;
+    int fp = fmin;
+    //int np = nmin;
 
-   float sum_x = xp;
-   float sum_y = yp;
+    float sum_x = xp;
+    float sum_y = yp;
    
-   {    // Register first vertex
+    {    // Register first vertex
        	int si = shadow->stats.verts;
 	shadow->verts[si][0] = xp;
 	shadow->verts[si][ycoord] = yp;
 	shadow->stats.verts = si+1;
-	
-   }
-   //if ( vp>=0 ) flags[vp] = 1;
-   printf("starting vertex %d, %f, %f\n", vp,xp,yp);
+    }
+    //if ( vp>=0 ) flags[vp] = 1;
+    printf("starting vertex %d, %f, %f\n", vp,xp,yp);
    
-   // Looking for boundary
-   while (1) {
+    // Looking for boundary
+    while (1) {
 	double amax = -MAX_FLOAT;
 	double ymax = -MAX_FLOAT;
         double xmax = -MAX_FLOAT;
@@ -675,7 +674,7 @@ ObjFile *CreateShadowObj_Projection(ObjFile *obj) {
             // next node
             ei2 = ni+1;
             if ( ei2>=obj->faces[fi].nodes ) ei2 = 0;
-           printf("ei1 ei2 %d %d\n", ei1,ei2); 
+            printf("ei1 ei2 %d %d\n", ei1,ei2); 
             // previous node
             vidx = obj->faces[fi].Node[ei1][0]-1;
 	    printf("    previous node, vidx=%d\n",vidx);
@@ -723,22 +722,18 @@ ObjFile *CreateShadowObj_Projection(ObjFile *obj) {
 
         if ( amax<-MAX_FLOAT/2. ) break;  // no edges to follow
         if ( vmax==vmin ) break;    // round complete
-
-        
+   
         // best edge got
         double dx = xmax-xp;
         double dy = ymax-yp;
         ap = amax = atan2(dy,dx);
         // assert(vp>=0);
-        
-        
+                
         printf(" loop exited. amax=%f, vmax=%d, ap= %f (%.2f) len %f\n",amax,vmax,ap,ap*180/PI,sqrt(dx*dx+dy*dy));
         
               //////
        // if (vmax==34682) break;    //DEBUG
         //////////////////////////////////////////////////////////////
-        
-        
         
         double tdist = -1;
         do {    
@@ -763,10 +758,9 @@ ObjFile *CreateShadowObj_Projection(ObjFile *obj) {
                 sum_x += xp;
                 sum_y = yp;
     
-                {    // Register vertex
-                    
+                {    // Register vertex            
                     printf("## got shadow new vertex (%f %f)\n",xp,yp);
-                        int si = shadow->stats.verts;
+                    int si = shadow->stats.verts;
                     shadow->verts[si][0] = xp;
                     shadow->verts[si][ycoord] = yp;
                     shadow->stats.verts = si+1;
@@ -823,9 +817,9 @@ ObjFile *CreateShadowObj_Projection(ObjFile *obj) {
                         fprintf(stderr,"Too many vertexes in shadow\n");
                         return shadow;
                     }
-   }  // while(1)
+    }  // while(1)
    
-   /*
+    /*
         // old part
 	for( i=0 ; i<obj->stats.verts ; i++ ) {
 	    float x = obj->verts[i][0];
@@ -856,11 +850,11 @@ ObjFile *CreateShadowObj_Projection(ObjFile *obj) {
 	shadow->verts[si][0] = xp;
 	shadow->verts[si][ycoord] = yp;
 	shadow->stats.verts = si+1;
-   }
-   */
-   /* comment to allow compiling
-   // Looking from right to left
-   while (1) {
+    }
+    */
+    /* comment to allow compiling
+    // Looking from right to left
+    while (1) {
 	double mmax = -MAX_FLOAT;
 	ymax = xmax = -MAX_FLOAT;
         // Find next vertex, with largest slope
@@ -893,57 +887,57 @@ ObjFile *CreateShadowObj_Projection(ObjFile *obj) {
 	shadow->verts[si][0] = xp;
 	shadow->verts[si][ycoord] = yp;
 	shadow->stats.verts = si+1;
-   }
-   */
-   printf("Shadow add central vertex. normal %f %f %f\n", shadow->norms[0][0], shadow->norms[0][1], shadow->norms[0][2]);
+    }
+    */
+    printf("Shadow add central vertex. normal %f %f %f\n", shadow->norms[0][0], shadow->norms[0][1], shadow->norms[0][2]);
 
  
-   if ( shadow->stats.verts<3 ) {
+    if ( shadow->stats.verts<3 ) {
        fprintf(stderr,"Invalid shadow\n");
        return shadow;
-   }
+    }
    
-   // Add central vertex
-   float xmed = sum_x / shadow->stats.verts;
-   float ymed = sum_y / shadow->stats.verts;
-   si = shadow->stats.verts;
-   shadow->verts[si][0] = xmed;
-   shadow->verts[si][ycoord] = ymed;
-   shadow->stats.verts = si+1;
-   printf("Shadow has %d vertexes\n", shadow->stats.verts);
+    // Add central vertex
+    float xmed = sum_x / shadow->stats.verts;
+    float ymed = sum_y / shadow->stats.verts;
+    si = shadow->stats.verts;
+    shadow->verts[si][0] = xmed;
+    shadow->verts[si][ycoord] = ymed;
+    shadow->stats.verts = si+1;
+    printf("Shadow has %d vertexes\n", shadow->stats.verts);
  
-   // smachdown zz coords to zmin
-   for( i=0 ; i<shadow->stats.verts ; i++ )
+    // smachdown zz coords to zmin
+    for( i=0 ; i<shadow->stats.verts ; i++ )
 	shadow->verts[i][zcoord] = zmin;
  
-   // alloc counters
-   shadow->counts.verts = Malloc(shadow->stats.verts, sizeof(int));
-   shadow->counts.norms = Malloc(shadow->stats.norms, sizeof(int));
-   shadow->order.verts = Malloc(shadow->stats.verts, sizeof(int));
-   shadow->order.norms = Malloc(shadow->stats.norms, sizeof(int));
-   shadow->counts.texts = Malloc(shadow->stats.texts, sizeof(int));
-   shadow->order.texts = Malloc(shadow->stats.texts, sizeof(int));
+    // alloc counters
+    shadow->counts.verts = Malloc(shadow->stats.verts, sizeof(int));
+    shadow->counts.norms = Malloc(shadow->stats.norms, sizeof(int));
+    shadow->order.verts = Malloc(shadow->stats.verts, sizeof(int));
+    shadow->order.norms = Malloc(shadow->stats.norms, sizeof(int));
+    shadow->counts.texts = Malloc(shadow->stats.texts, sizeof(int));
+    shadow->order.texts = Malloc(shadow->stats.texts, sizeof(int));
  
-   // Add faces
-   shadow->stats.faces = shadow->stats.verts - 1;
-   shadow->faces = Malloc(shadow->stats.faces, sizeof(Face));   
-   for( i=0 ; i<shadow->stats.faces ; i++ ) {
-       shadow->faces[i].nodes = 3;   // shadow is build using triangles.
-       shadow->faces[i].Node = Malloc(3,sizeof(FaceNode));
-       shadow->faces[i].Node[0][0] = i+1;
-       shadow->faces[i].Node[0][1] = 2;        // Light texture point
-       shadow->faces[i].Node[0][2] = 1;
-       shadow->faces[i].Node[1][0] = i+2;
-       shadow->faces[i].Node[1][1] = 2;        // Light texture point
-       shadow->faces[i].Node[1][2] = 1;
-       shadow->faces[i].Node[2][0] = shadow->stats.verts; // last vertex
-       shadow->faces[i].Node[2][1] = 1;        // Dark texture point
-       shadow->faces[i].Node[2][2] = 1;
-   }
-   shadow->faces[i-1].Node[1][0] = 1;   // Last polygon uses first vertex 
-   if ( Verbose>2 ) printf("Shadow done\n");
+    // Add faces
+    shadow->stats.faces = shadow->stats.verts - 1;
+    shadow->faces = Malloc(shadow->stats.faces, sizeof(Face));   
+    for( i=0 ; i<shadow->stats.faces ; i++ ) {
+        shadow->faces[i].nodes = 3;   // shadow is build using triangles.
+        shadow->faces[i].Node = Malloc(3,sizeof(FaceNode));
+        shadow->faces[i].Node[0][0] = i+1;
+        shadow->faces[i].Node[0][1] = 2;        // Light texture point
+        shadow->faces[i].Node[0][2] = 1;
+        shadow->faces[i].Node[1][0] = i+2;
+        shadow->faces[i].Node[1][1] = 2;        // Light texture point
+        shadow->faces[i].Node[1][2] = 1;
+        shadow->faces[i].Node[2][0] = shadow->stats.verts; // last vertex
+        shadow->faces[i].Node[2][1] = 1;        // Dark texture point
+        shadow->faces[i].Node[2][2] = 1;
+    }
+    shadow->faces[i-1].Node[1][0] = 1;   // Last polygon uses first vertex 
+    if ( Verbose>2 ) printf("Shadow done\n");
 
-   return shadow;
+    return shadow;
 }
 
 
@@ -1129,8 +1123,8 @@ void ExplodeOutputFile(char *OutputFile, ObjFile *obj) {
 	    SetIndexs( obj_part );
 
 	    snprintf(fname,MAX_FILE_NAME_LEN,"%s_%u_%d_%d_%d.obj", OutputFile, fnum, imat, iobj, igrp);
-printf("  Saving PartFile '%s'\n",fname); 
-//printf("    iface:%d\n", iface);
+	    if (Verbose>2) printf("  Saving PartFile '%s'\n",fname); 
+	    //printf("    iface:%d\n", iface);
 	    SaveObjFile(fname, obj_part );
 
 	    Free(obj_part);
@@ -1143,13 +1137,13 @@ printf("  Saving PartFile '%s'\n",fname);
 
 void FreeObjFile(ObjFile *obj) {
     int i;
-    printf("Free\n");
+    if ( Verbose>2) printf("Free\n");
     for( i=0 ; i<obj->stats.faces ; i++ )
 	Free(obj->faces[i].Node);
     for( i=0 ; i<obj->stats.grps ; i++ )
 	Free(obj->grps[i].name);
 
- printf("free lib\n");
+    if ( Verbose>2) printf("free lib\n");
 
     for( i=0 ; i<obj->stats.libs ; i++ )
 	Free(obj->libs[i].name);
@@ -1160,27 +1154,27 @@ void FreeObjFile(ObjFile *obj) {
     for( i=0 ; i<obj->stats.objs ; i++ )
 	Free(obj->objs[i].name);
 
- printf("free faces\n");
+    if ( Verbose>2) printf("free faces\n");
 
     Free(obj->faces); 
- printf("free verts\n");
+    if ( Verbose>2) printf("free verts\n");
 
     Free(obj->texts); 
-     printf("free texts\n");
+    if ( Verbose>2) printf("free texts\n");
 
     Free(obj->norms); 
- printf("free norms\n");
+    if ( Verbose>2) printf("free norms\n");
 
     Free(obj->grps);  
     Free(obj->mats);
     Free(obj->objs);
     Free(obj->shds);
     Free(obj->libs);
- printf("free counts\n");   
+    if ( Verbose>2) printf("free counts\n");   
     Free(obj->counts.verts);
     Free(obj->counts.norms);
     Free(obj->counts.texts);
- printf("free order\n");  
+    if ( Verbose>2) printf("free order\n");  
     Free(obj->order.verts);
     Free(obj->order.texts);
     Free(obj->order.norms);
@@ -1308,7 +1302,7 @@ void CleanFaces(ObjFile *obj) {
 		if ( v<1 || v>obj->stats.verts  || obj->counts.verts[v-1]<0 ) {
 		    obj->faces[i].nodes = 0;
 		    if ( Verbose>=3 )
-                fprintf(stderr,"face %d removed.v=%d,count=%d\n", i, v, obj->counts.verts[v-1] );
+                        fprintf(stderr,"face %d removed.v=%d,count=%d\n", i, v, obj->counts.verts[v-1] );
 		    break;
 		}
 	    }
@@ -1332,13 +1326,13 @@ void SetIndexs(ObjFile *obj) {
 }
 
 void FilterVerts(ObjFile *obj, Vert min, Vert max) {
-	int i, c;
-	for( i=0 ; i<obj->stats.verts ; i++ ) {
-	    for( c=0 ; c<3 ; c++ ) {
+    int i, c;
+    for( i=0 ; i<obj->stats.verts ; i++ ) {
+	for( c=0 ; c<3 ; c++ ) {
             if ( obj->verts[i][c]<min[c] ) {
                 if ( ! SolidCut ) {
-                obj->counts.verts[i] = NULL_IDX;
-                break;
+                    obj->counts.verts[i] = NULL_IDX;
+                    break;
                 }
                 else obj->verts[i][c] = min[c];
             }
@@ -1349,8 +1343,8 @@ void FilterVerts(ObjFile *obj, Vert min, Vert max) {
                 }
                 else obj->verts[i][c] = max[c];
             }
-	    }
-	}
+        }
+    }
 }
 
 
@@ -1754,13 +1748,13 @@ int JoinObjFiles(int nObjs, ObjFile ObjSet[], ObjFile *obj) {
 		obj->stats.norms += ObjSet[i].stats.norms;
 		obj->stats.texts += ObjSet[i].stats.texts;
 		obj->stats.paras += ObjSet[i].stats.paras;
-		obj->stats.grps += ObjSet[i].stats.grps;
-		obj->stats.mats += ObjSet[i].stats.mats;
-		obj->stats.objs += ObjSet[i].stats.objs;
-		obj->stats.libs += ObjSet[i].stats.libs;
-		obj->stats.shds += ObjSet[i].stats.shds;
+		obj->stats.grps  += ObjSet[i].stats.grps;
+		obj->stats.mats  += ObjSet[i].stats.mats;
+		obj->stats.objs  += ObjSet[i].stats.objs;
+		obj->stats.libs  += ObjSet[i].stats.libs;
+		obj->stats.shds  += ObjSet[i].stats.shds;
+		
 		int j;
-
 		for( j=0 ; j<3 ; j++ ) {
 		    if ( ObjSet[i].stats.vmin[j] < obj->stats.vmin[j] )
 			obj->stats.vmin[j] = ObjSet[i].stats.vmin[j];
@@ -1823,7 +1817,6 @@ int JoinObjFiles(int nObjs, ObjFile ObjSet[], ObjFile *obj) {
 			obj->mats[counters.mats+j].line = ObjSet[i].mats[j].line + counters.faces;
 			obj->mats[counters.mats+j].name = strdup(ObjSet[i].mats[j].name);
 		}
-
 
 		counters.verts += ObjSet[i].stats.verts;
 		counters.norms += ObjSet[i].stats.norms;
@@ -2003,18 +1996,18 @@ int main(int argc, char **argv) {
         exit(0);
     }
     FilterVerts( &obj, VMin, VMax );
-printf("Filtrou verts\n");
+    if ( Verbose>2) printf("Filtrou verts\n");
     //SetIndexs(&obj);
     CleanFaces(&obj);
 
-printf("Filtrou verts\n");
+    if ( Verbose>2) printf("Filtrou verts\n");
     SetUseCounters(&obj);
     ProcVerts( &obj );
-printf("Processou verts\n");
+    if ( Verbose>2) printf("Processou verts\n");
     SetIndexs(&obj);
-printf("criou idxs\n");
+    if ( Verbose>2) printf("criou idxs\n");
     if ( Explode )
-		ExplodeOutputFile(OutputFile, &obj);
+        ExplodeOutputFile(OutputFile, &obj);
     else {
         printf("vai gravar\n");
         if ( OutputFile && strrstr(OutputFile, ".pgm") ) 
@@ -2028,17 +2021,17 @@ printf("criou idxs\n");
         ObjFile *Shadow = CreateShadowObj(&obj);
         SetUseCounters(Shadow);
         SetIndexs(Shadow);
-PrintObjStats(&(Shadow->stats));
+        if ( Verbose>0 ) PrintObjStats(&(Shadow->stats));
 	SaveObjFile(ShadowOutputFile, Shadow);
-printf("saved\n");
+        if ( Verbose>12) printf("saved\n");
 	FreeObjFile(Shadow);
-	printf("Shadow file freed\n");
+	if ( Verbose>12) printf("Shadow file freed\n");
     }
-printf("vai limpar verts\n");
+    if ( Verbose>12) printf("vai limpar verts\n");
     FreeObjFile(&obj);
     
-printf("limpou verts\n");
-	return 0;
+    if ( Verbose>2) printf("limpou verts\n");
+    return 0;
 }
 		
 
