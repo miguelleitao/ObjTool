@@ -94,7 +94,8 @@ double findVerticalIntersection(ObjFile *obj, Vert coords) {
     int zCoord = 3-findIntersection;
     int vidx = getVertexIdx(obj, 0, findIntersection, coords[0], coords[findIntersection]);
     if ( vidx<0 ) return 0.;
-    
+    printf("findVerticalIntersection retornando %f %f %f, z=%d, vidx=%d\n", obj->verts[vidx][0], obj->verts[vidx][1], obj->verts[vidx][2],
+           zCoord, vidx);
     return obj->verts[vidx][zCoord];
     
 }
