@@ -1519,7 +1519,8 @@ void Usage() {
     fprintf(stderr,"\t\t-rz ang		   rotate ang degrees around zz axis\n");
     fprintf(stderr,"\t\t-Ni    		   invert all normals\n");
     fprintf(stderr,"\t\t-Nc    		   invert wrong facing normals\n");
-    fprintf(stderr,"\t\t-Ns    		   resort face vertexes to match normal\n");
+    fprintf(stderr,"\t\t-Ns    		   resort face vertexes to match poligon normal\n");
+    fprintf(stderr,"\t\t-Nx    		   x can be a number [0,7] dening a biwise combination of 'sci' options\n");
     fprintf(stderr,"\t\t-R                 use relative coords\n");
     fprintf(stderr,"\t\t-M		   do not output mtllib directives\n");
     fprintf(stderr,"\t\t-c                 solid cut\n");

@@ -14,6 +14,7 @@ _________
 * Select (use only) geometry that is (or is not) marked with a specific material.
 * Select (use only) geometry according to its position.
 * Apply transformations (translation/rotation/scale) to selected (or all) geometry.
+* Invert / correct vertex normal vectors
 
 _________
 ### Dependences
@@ -53,7 +54,10 @@ ObjTool [options] inputfile1.obj inputfile2.obj
     -rx value	        rotate around xx axis
     -ry value	        rotate around yy axis
     -rz value	        rotate around zz axis
-    -N			invert normals
+    -Ni			invert all normals
+    -Nc			invert vertex normals that do not match edge sequence
+    -Ns			invert vertex order to match poligon normal
+    -Nx			x can be a number [0,7], defining a bitwise combination of the 'sci' options.
     -R                  use relative coords    
     -M	                Do not output mtllib directives
     -c                  solid cut
