@@ -87,9 +87,6 @@ double findVerticalIntersection_master(ObjFile *obj, Vert coords) {
         // Intersetion test was performed only with the axis aligned bounding rectangle.
         // Works well if face is an axis aligned rectangle.
         
-        
-        
-        
         // Face intersected !!
         printf("    face intersected !! \n");
         
