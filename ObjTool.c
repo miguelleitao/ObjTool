@@ -77,24 +77,25 @@ int NormIndex(ObjFile *obj, int i, int total) {
 }
 
 void PrintObjStats(ObjStats *os) {
-        printf("Obj Stats\n");
-	printf("Vertices: %d\n", os->verts);
+        printf("# Obj Stats\n");
+	printf("  Vertices: %d\n", os->verts);
 	if ( os->verts > 0 ) {
-	    printf("  Min: %.3f %.3f %.3f\n", os->vmin[0], os->vmin[1], os->vmin[2]);
-	    printf("  Max: %.3f %.3f %.3f\n", os->vmax[0], os->vmax[1], os->vmax[2]);
+	    printf("    Min: %.3f %.3f %.3f\n", os->vmin[0], os->vmin[1], os->vmin[2]);
+	    printf("    Max: %.3f %.3f %.3f\n", os->vmax[0], os->vmax[1], os->vmax[2]);
 	}
-	printf("Normals: %d\n", os->norms);
-	printf("Texture Coords: %d\n", os->texts);
+	printf("  Normals: %d\n", os->norms);
+	printf("  Texture Coords: %d\n", os->texts);
 	if ( os->texts > 0 ) {
-	    printf("  Min: %.3f %.3f\n", os->tmin[0], os->tmin[1]);
-	    printf("  Max: %.3f %.3f\n", os->tmax[0], os->tmax[1]);
+	    printf("    Min: %.3f %.3f\n", os->tmin[0], os->tmin[1]);
+	    printf("    Max: %.3f %.3f\n", os->tmax[0], os->tmax[1]);
 	}
-	printf("Faces: %d\n", os->faces);
-	printf("Objects: %d\n", os->objs);
-	printf("ObjGroups: %d\n", os->grps);
-	printf("UseMtl: %d\n", os->mats);
-	printf("MtlLib:	%d\n", os->libs);
-	printf("ShadGrp:	%d\n", os->shds);
+	printf("  Faces: %d\n", os->faces);
+	printf("  Objects: %d\n", os->objs);
+	printf("  ObjGroups: %d\n", os->grps);
+	printf("  UseMtl: %d\n", os->mats);
+	printf("  MtlLib:	%d\n", os->libs);
+	printf("  ShadGrp:	%d\n", os->shds);
+	printf("#\n");
 }
 
 void PrintLongObjStats(ObjFile *obj) {
@@ -934,24 +935,19 @@ ObjFile *CreateShadowObj_Projection(ObjFile *obj) {
     return shadow;
 }
 
-
-
-
 void SaveObjFile(char *fname, ObjFile *obj) {
-    printf("saving\n");
 	FILE *fout;
 	fout = stdout;
 	int i;
 	int nv=0, nt=0, nn=0;
 	
 	if ( fname && *fname ) {
-		printf("Writing file '%s'\n",fname);
+		if ( Verbose ) printf("Writing file '%s'\n",fname);
 		fout = fopen(fname,"w");
 		if ( ! fout ) {
 		    fprintf(stderr,"Cannot open output file '%s'\n", fname);
 		    exit(5);
 		}
-	        printf("    abriu\n");
 	}
 	fprintf(fout,"# file written by ObjTool\n\n");
         
@@ -974,7 +970,6 @@ void SaveObjFile(char *fname, ObjFile *obj) {
                     nt++;
                 }
             }
-
 	}
 	else {
 	    for( i=0 ; i<obj->stats.texts ; i++ ) 
@@ -1034,18 +1029,14 @@ void SaveObjFile(char *fname, ObjFile *obj) {
 		    if ( obj->faces[i].Node[n][1]!=NULL_IDX )
 			fprintf(fout,"%d", TextIndex(obj,obj->faces[i].Node[n][1],nt) );
 		}
-
-		//fprintf(fout,"/");
 		if ( obj->faces[i].Node[n][2]!=NULL_IDX ) {
 			fprintf(fout,"/");
 			fprintf(fout,"%d", NormIndex(obj,obj->faces[i].Node[n][2],nn) );
 		}
-
 		fprintf(fout," ");
 	    }
 	    fprintf(fout,"\n");
 	}
-	
 	if ( Verbose>9 ) printf("    %d faces saved\n", saved_faces);
 	if ( fout!=stdout ) fclose(fout); 
 }
@@ -1070,8 +1061,7 @@ void ExplodeOutputFile(char *OutputFile, ObjFile *obj) {
 	#define MAX_FILE_NAME_LEN (480)
 	char fname[MAX_FILE_NAME_LEN];
 	unsigned int fnum = 0;
-
-        
+    
 	do {
             // printf("    Adding face %d\n", iface);
             // Create new obj_part
@@ -1111,7 +1101,7 @@ void ExplodeOutputFile(char *OutputFile, ObjFile *obj) {
 	    // End of part detected.
 	    // Clear all remaining faces.
 	    for( i=iface ; i<obj_part->stats.faces ; i++ )
-            obj_part->faces[i].nodes = 0;
+                obj_part->faces[i].nodes = 0;
 
 	    SetUseCounters(obj_part);
 	    SetIndexs( obj_part );
@@ -1131,7 +1121,7 @@ void ExplodeOutputFile(char *OutputFile, ObjFile *obj) {
 
 void FreeObjFile(ObjFile *obj) {
     int i;
-    if ( Verbose>2 ) printf("Free\n");
+    if ( Verbose>4 ) printf("Free\n");
     
     if ( Verbose>12 ) printf("free stats\n");
     for( i=0 ; i<obj->stats.faces ; i++ )
@@ -1237,11 +1227,12 @@ void SetUseCounters(ObjFile *obj) {
 	} 
 }
 
-void CleanFaces(ObjFile *obj) {
+static int CleanFaces(ObjFile *obj) {
 	int i, n;
 	int midx = 0, oidx = 0, gidx = 0;	// current indexes.
 						// 0(zero) means material/object/group not yet defined
-						// Faces without defined material/object/group always fail the test. 
+						// Faces without defined material/object/group always fail the test.
+	int nRemFaces = 0;
 	for( i=0 ; i<obj->stats.faces ; i++ ) {
 	    // Remove face if material matches/does not match selected Material
 	    if ( Material!=NULL ) {
@@ -1249,12 +1240,18 @@ void CleanFaces(ObjFile *obj) {
 		if ( Negate ) {
 			if ( midx && strcmp(Material,obj->mats[midx-1].name)==0 ) {
 			    obj->faces[i].nodes = 0;
+			    nRemFaces++;
+			    if ( Verbose>3 )
+                    	        printf("  Face %d removed.\n", i);
 			    continue;
 			}
 		}
 		else {
 			if ( ! midx || strcmp(Material,obj->mats[midx-1].name)!=0 ) {
 			    obj->faces[i].nodes = 0;
+			    nRemFaces++;
+			    if ( Verbose>3 )
+                    	        printf("  Face %d removed.\n", i);
 			    continue;
 			}
 		}
@@ -1266,12 +1263,18 @@ void CleanFaces(ObjFile *obj) {
 		if ( Negate ) {
 			if ( oidx && strcmp(SelectObject[0],obj->objs[oidx-1].name)==0 ) {
 			    obj->faces[i].nodes = 0;
+			    nRemFaces++;
+			    if ( Verbose>3 )
+                    	        printf("  Face %d removed.\n", i);
 			    continue;
 			}
 		}
 		else {
 			if ( ! oidx || strcmp(SelectObject[0],obj->objs[oidx-1].name)!=0 ) {
 			    obj->faces[i].nodes = 0;
+			    nRemFaces++;
+			    if ( Verbose>3 )
+                    	        printf("  Face %d removed.\n", i);
 			    continue;
 			}
 		}
@@ -1283,12 +1286,18 @@ void CleanFaces(ObjFile *obj) {
 		if ( Negate ) {
 			if ( gidx && strcmp(SelectGroup[0],obj->grps[gidx-1].name)==0 ) {
 			    obj->faces[i].nodes = 0;
+			    nRemFaces++;
+			    if ( Verbose>3 )
+                    	        printf("  Face %d removed.\n", i);
 			    continue;
 			}
 		}
 		else {
 			if ( ! gidx || strcmp(SelectGroup[0],obj->grps[gidx-1].name)!=0 ) {
 			    obj->faces[i].nodes = 0;
+			    nRemFaces++;
+			    if ( Verbose>3 )
+                    	        printf("  Face %d removed.\n", i);
 			    continue;
 			}
 		}
@@ -1304,12 +1313,17 @@ void CleanFaces(ObjFile *obj) {
 		int v = obj->faces[i].Node[n][0];
 		if ( v<1 || v>obj->stats.verts  || obj->counts.verts[v-1]<0 ) {
 		    obj->faces[i].nodes = 0;
-		    if ( Verbose>=3 )
-                        fprintf(stderr, "face %d removed.v=%d,count=%d\n", i, v, obj->counts.verts[v-1] );
+		    nRemFaces++;
+		    if ( Verbose>=7 )
+                        fprintf(stderr, "  Face %d removed.v=%d,count=%d\n", i, v, obj->counts.verts[v-1] );
+                    else if ( Verbose>3 )
+                    	printf("  Face %d removed.\n", i);
 		    break;
 		}
 	    }
 	} 
+	if ( Verbose ) printf("Faces removed: %d/%d (%.2f%%)\n", nRemFaces, obj->stats.faces, 100.f * (float)nRemFaces / (float)obj->stats.faces );
+	return nRemFaces;
 }
 
 
@@ -1427,18 +1441,24 @@ void ProcVerts(ObjFile *obj) {
 		obj->norms[i][1] =  y*CosF(Rotate[0]) - z*SinF(Rotate[0]);
         	obj->norms[i][2] =  y*SinF(Rotate[0]) + z*CosF(Rotate[0]);
         	/*
+        	// Moved to new section
 		if ( InvertNormals==1 )
 		    for( c=0 ; c<3 ; c++)
 		        obj->norms[i][c] *= -1.;
-		        */
+		*/
 	}
 	
+        int nInvNormals = 0;
 	if ( InvertNormals & 0b001 ) {
-	        for( i=0 ; i<obj->stats.norms ; i++ ) 
+	        for( i=0 ; i<obj->stats.norms ; i++ ) {
+	            nInvNormals++;
 	            for( c=0 ; c<3 ; c++)
 		        obj->norms[i][c] *= -1.;
+		}
+		if ( Verbose ) printf("Normals inverted: %d\n", nInvNormals);
 	}
 	
+	int nInvFaces = 0;
 	if ( InvertNormals & 0b110 ) {
 	        for( i=0 ; i<obj->stats.faces ; i++ ) {
 	            vec3f polyCross;
@@ -1461,6 +1481,7 @@ void ProcVerts(ObjFile *obj) {
 	                    	// printf("  Invertendo normal %d\n", iNormal);
 	                        vec3_invert(obj->norms[iNormal-1]);
 	                        vec3f_copy(vertNormal, obj->norms[iNormal-1]);
+	                        if ( Verbose>4 ) printf("  Normal %d inverted\n", iNormal);
 	                    }
 	                }
 	                vec3f_add(polyNormal, vertNormal);
@@ -1473,7 +1494,7 @@ void ProcVerts(ObjFile *obj) {
 	            	// poligono invertido.
 	            	if ( InvertNormals & 0b0100 ) {
 	            	    // Inverte ordem dos vertices da face
-	            	    //printf("invertendo ordem do poligono %d\n", i);
+	            	    if ( Verbose>4 ) printf("  Face %d inverted\n", i);
 	            	    int n1, n2;
 	            	    for( n1=0, n2=obj->faces[i].nodes-1 ; n1<n2 ; n1++, n2-- ) {
 	            	        int temp;
@@ -1484,10 +1505,12 @@ void ProcVerts(ObjFile *obj) {
 	            	            obj->faces[i].Node[n2][r] = temp;
 	            	        }
 	            	    }
+	            	    nInvFaces++;
 	            	}
-	            }
-	            
+	            }   
 	        }
+	        if ( Verbose && (InvertNormals & 0b0100) ) 
+	            printf("Inverted faces: %d/%d (%.2f%%)\n", nInvFaces, obj->stats.faces, 100.f*(float)nInvFaces/(float)obj->stats.faces );
 	}
 }
 
@@ -1926,26 +1949,18 @@ void SaveImageMap(char *OutputFile, ObjFile *obj) {
     fclose(fout);
 }
     
-
-
 int main(int argc, char **argv) {
-/*
-	if ( argc<=1 ) {
-		Usage();
-		exit(1);
-	}
-	
-*/
+
     int fi = GetOptions(argc,argv);
     if ( Verbose>=0 )
-        fprintf(stderr,"# ObjTool\n# Compile date: %s\n", CDATE);
+        fprintf(stderr, "# ObjTool\n# Compile date: %s\n", CDATE);
     
     //printf("# fi = %d, argc=%d\n",fi,argc);
 
     if ( fi>=argc ) {
-	    fprintf(stderr,"Al least one input file must be specified.\n");
-	    Usage();
-	    exit(1);
+	fprintf(stderr, "Al least one input file must be specified.\n");
+	Usage();
+	exit(1);
     }
 
     // Alloc and load obj files
@@ -1955,35 +1970,34 @@ int main(int argc, char **argv) {
 
     int i = 0;
     while ( fi<argc) {
-		if ( Verbose>=0 ) fprintf(stderr,"Loading ObjFile '%s'\n", argv[fi]);
-		LoadObjFile(argv[fi], ObjSet+i);
-		SetUseCounters(ObjSet+i);
-		i++;
-		fi++;
+	if ( Verbose>0 ) fprintf(stderr,"Loading ObjFile '%s'\n", argv[fi]);
+	LoadObjFile(argv[fi], ObjSet+i);
+	SetUseCounters(ObjSet+i);
+	i++;
+	fi++;
     }
 
-    // All files got
-    // Join all geometry into one objfile	
+    // All files got.
+    // Join all geometry into one ObjFile struct
     ObjFile obj;	
-    JoinObjFiles(NObjects,ObjSet,&obj);
+    JoinObjFiles(NObjects, ObjSet, &obj);
 	
     SetUseCounters(&obj);
     if ( info ) {
-        if ( Verbose>1 )
+        if ( Verbose>2 )
             PrintFullObjStats(&obj);
         else 
-            if ( Verbose>0 )
+            if ( Verbose>1 )
                 PrintLongObjStats(&obj);
             else
                 PrintObjStats(&(obj.stats));
         exit(0);
     }
-    if ( Verbose>0 ) {
-        if ( Verbose>3 )
+    if ( Verbose>1 ) {
+        if ( Verbose>5 )
             PrintFullObjStats(&obj);
         else
             PrintObjStats(&(obj.stats));
-        printf("# End stats\n");
     }
     
     if ( findIntersection==1 ) {
@@ -1997,41 +2011,41 @@ int main(int argc, char **argv) {
         exit(0);
     }
     FilterVerts( &obj, VMin, VMax );
-    if ( Verbose>2 ) printf("Filtrou verts\n");
+    if ( Verbose>2 ) printf("Vertexes Filtered\n");
     //SetIndexs(&obj);
+    
     CleanFaces(&obj);
-
-    if ( Verbose>2 ) printf("Filtrou verts\n");
+    
     SetUseCounters(&obj);
     ProcVerts( &obj );
-    if ( Verbose>2 ) printf("Processou verts\n");
+    if ( Verbose>2 ) printf("Vertexes processed\n");
     SetIndexs(&obj);
-    if ( Verbose>2 ) printf("criou idxs\n");
+    if ( Verbose>2 ) printf("Indexes set\n");
     if ( Explode )
         ExplodeOutputFile(OutputFile, &obj);
     else {
-        printf("vai gravar\n");
+        if ( Verbose>8 ) printf("Saving to file\n");
         if ( OutputFile && strrstr(OutputFile, ".pgm") ) 
             SaveImageMap(OutputFile, &obj);
         else
             SaveObjFile(OutputFile, &obj);
     }
     if ( ShadowOutputFile ) {
-        printf("shadow\n");
+        if ( Verbose>3 ) printf("Creating Shadow Obj\n");
 	//ObjFile *Shadow = CreateShadowObj(&obj);
         ObjFile *Shadow = CreateShadowObj(&obj);
         SetUseCounters(Shadow);
         SetIndexs(Shadow);
-        if ( Verbose>0 ) PrintObjStats(&(Shadow->stats));
+        if ( Verbose>4 ) PrintObjStats(&(Shadow->stats));
 	SaveObjFile(ShadowOutputFile, Shadow);
-        if ( Verbose>12 ) printf("saved\n");
+        if ( Verbose>8 ) printf("saved\n");
 	FreeObjFile(Shadow);
-	if ( Verbose>12 ) printf("Shadow file freed\n");
+	if ( Verbose>8 ) printf("Shadow file freed\n");
     }
     if ( Verbose>12 ) printf("vai limpar verts\n");
     FreeObjFile(&obj);
     
-    if ( Verbose>2 ) printf("limpou verts\n");
+    if ( Verbose>12 ) printf("limpou verts\n");
     return 0;
 }
 		
