@@ -65,4 +65,6 @@ ObjTool [options] inputfile1.obj inputfile2.obj
     -O outfile          output to outfile (default: stdout)
     -e                  Explode outfile into single objects
     -S shadow_file      shadow output to shadow_file (default: no shadow ouput)
+    -v                  increase verbosity
+    -q                  quiet
 ```

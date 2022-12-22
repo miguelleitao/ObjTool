@@ -1564,7 +1564,9 @@ void Usage() {
     fprintf(stderr,"\t\t-fy x z		   find Y coord for x,z vertical\n");
     fprintf(stderr,"\t\t-O outfile         output to outfile (default: stdout)\n");
     fprintf(stderr,"\t\t-e		   explode outfile into single objects\n");
-    fprintf(stderr,"\t\t-S shadow_file     shadow output to shadow_file (default: no shadow ouput)\n\n");
+    fprintf(stderr,"\t\t-S shadow_file     shadow output to shadow_file (default: no shadow ouput)\n");
+    fprintf(stderr,"\t\t-v                 increase verbosity\n");
+    fprintf(stderr,"\t\t-q                 quiet\n\n");
 }
 
 void InvalidOption(char *opt) {
