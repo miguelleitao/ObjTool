@@ -17,6 +17,9 @@ linmath:
 install: ObjTool
 	cp $^ /usr/local/bin
 
+shadow.png:
+	convert -size 256x256 -define gradient:vector=128,64,128,0 gradient:'graya(0,0.5)-none' $@
+
 clean:
 	$(RM) *.o ObjTool
 
