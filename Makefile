@@ -24,7 +24,8 @@ clean:
 	$(RM) *.o ObjTool
 
 push:
-	git add ObjTool.c intersection.c load_obj.c ObjTool.h Makefile README.md
+	git add .
+	@#ObjTool.c intersection.c load_obj.c ObjTool.h Makefile README.md
 	git commit -m "update"
 	git push
 

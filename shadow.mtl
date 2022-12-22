@@ -1,0 +1,21 @@
+# Ground material
+newmtl shadow
+Ka 1.000 1.000 1.000
+Kd 1.000 1.000 1.000
+Ks 0.000 0.000 0.000
+d 1.0
+illum 2
+map_Kd shadow.png
+newmtl white
+Ka 1.000 1.000 1.000
+Kd 1.000 1.000 1.000
+Ks 0.000 0.000 0.000
+d 1.0
+illum 2
+newmtl black
+Ka 0.000 0.000 0.000
+Kd 0.000 0.000 0.000
+Ks 0.000 0.000 0.000
+d 1.0
+illum 2
+
