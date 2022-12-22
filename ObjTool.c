@@ -1330,6 +1330,7 @@ static int CleanFaces(ObjFile *obj) {
 void SetIndexs(ObjFile *obj) {
 	// Assign an order number to each used vertex/texture coord/norm
 	// Unused vertex/texture coord/norm will get no order number.
+	// Order number are stored into obj->order.* arrays.
 	int i;
 	int nv=0, nt=0, nn=0;
 	for( i=0 ; i<obj->stats.verts ; i++ ) 
@@ -1343,6 +1344,9 @@ void SetIndexs(ObjFile *obj) {
 }
 
 void FilterVerts(ObjFile *obj, Vert min, Vert max) {
+    // Keep only Verts inside AABB(min,max).
+    // Unselected Verts are marked as unused (counts=NULL:IDX) or
+    // translated to AABB border, depending on global SolidCut.
     int i, c;
     for( i=0 ; i<obj->stats.verts ; i++ ) {
 	for( c=0 ; c<3 ; c++ ) {
@@ -1366,8 +1370,8 @@ void FilterVerts(ObjFile *obj, Vert min, Vert max) {
 
 
 void  vertCrossProduct(ObjFile *obj, int nFace, int n0, Vert cross) {
-    // Dot product of edges in vertex (n0+1)
-    // returns 0 when edges are colinear   
+    // Cross product of edges in vertex (n0+1).
+    // Cross=nullVec when edges are colinear.   
     
     Face face = obj->faces[nFace];
     int n1 = (n0+1) % face.nodes;
@@ -1441,15 +1445,15 @@ void ProcVerts(ObjFile *obj) {
 		obj->norms[i][1] =  y*CosF(Rotate[0]) - z*SinF(Rotate[0]);
         	obj->norms[i][2] =  y*SinF(Rotate[0]) + z*CosF(Rotate[0]);
         	/*
-        	// Moved to new section
-		if ( InvertNormals==1 )
+        	// Moved to new section. 
+		if ( InvertNormals & 0b0001 )
 		    for( c=0 ; c<3 ; c++)
 		        obj->norms[i][c] *= -1.;
 		*/
 	}
 	
         int nInvNormals = 0;
-	if ( InvertNormals & 0b001 ) {
+	if ( InvertNormals & 0b001 ) {	// -Ni
 	        for( i=0 ; i<obj->stats.norms ; i++ ) {
 	            nInvNormals++;
 	            for( c=0 ; c<3 ; c++)
@@ -1459,7 +1463,7 @@ void ProcVerts(ObjFile *obj) {
 	}
 	
 	int nInvFaces = 0;
-	if ( InvertNormals & 0b110 ) {
+	if ( InvertNormals & 0b110 ) {	// -Nc  or  -Ns
 	        for( i=0 ; i<obj->stats.faces ; i++ ) {
 	            vec3f polyCross;
 	            vec3f_set(polyCross, 0., 0., 0.);
@@ -1481,6 +1485,7 @@ void ProcVerts(ObjFile *obj) {
 	                    	// printf("  Invertendo normal %d\n", iNormal);
 	                        vec3_invert(obj->norms[iNormal-1]);
 	                        vec3f_copy(vertNormal, obj->norms[iNormal-1]);
+	                        nInvNormals++;
 	                        if ( Verbose>4 ) printf("  Normal %d inverted\n", iNormal);
 	                    }
 	                }
@@ -1509,8 +1514,12 @@ void ProcVerts(ObjFile *obj) {
 	            	}
 	            }   
 	        }
-	        if ( Verbose && (InvertNormals & 0b0100) ) 
-	            printf("Inverted faces: %d/%d (%.2f%%)\n", nInvFaces, obj->stats.faces, 100.f*(float)nInvFaces/(float)obj->stats.faces );
+	        if ( Verbose ) {
+	            if ( InvertNormals & 0b0100 ) 
+	                printf("Inverted faces: %d/%d (%.2f%%)\n", nInvFaces, obj->stats.faces, 100.f*(float)nInvFaces/(float)obj->stats.faces );       
+	            if ( InvertNormals & 0b0010 ) 
+	                printf("Inverted faces: %d/%d (%.2f%%)\n", nInvNormals, obj->stats.norms, 100.f*(float)nInvNormals/(float)obj->stats.norms );
+	        }
 	}
 }
 
