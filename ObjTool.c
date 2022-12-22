@@ -32,6 +32,8 @@ char *SelectObject[20];
 int SelGroups = 0;
 int SelObjects = 0;
 short int genTextCoords = 0;
+char upAxis = 'y';	// Used for shadow calculation.
+			// Possible values: {y,z}
 
 #define SinF(x) ( sinf(x) )
 #define CosF(x) ( cosf(x) )
@@ -213,7 +215,10 @@ double FindClosestIntersection(float x1, float y1,
                                float x2, float y2, 
                                ObjFile *obj, 
                                int *nfi, int *nni) {
-    int ycoord = 2; // must be the same as the one defined at CreateShadowObj
+    int ycoord = 1; // must be the same as the one defined at CreateShadowObj
+    
+    if ( upAxis=='y' )	ycoord = 2;
+    
     // finds edge from obj that crosses segment (x1,y1)-(x2,y2) nearest to (x1,y1)
     vec2 p1 = { x1, y1 };
     vec2 p2 = { x2, y2 };
@@ -336,9 +341,17 @@ ObjFile *CreateShadowObj_v1(ObjFile *obj) {
 }
 
 ObjFile *CreateShadowObj(ObjFile *obj) {
-    // new version using convex hull
-    int ycoord = 2;
-    int zcoord = 1;
+    // New version using convex hull
+    // Only works in y or z direction.
+    // Result is always a convex poligon.
+    
+    int ycoord = 1;
+    int zcoord = 2;
+    
+    if ( upAxis=='y' )	{
+        ycoord = 2;
+        zcoord = 1;
+    }
     if (Verbose>2) fprintf(stderr,"Creating shadow\n");
   
     int i, si;	// face indexs
@@ -1129,7 +1142,7 @@ void FreeObjFile(ObjFile *obj) {
     int i;
     if ( Verbose>4 ) printf("Free\n");
     
-    if ( Verbose>12 ) printf("free stats\n");
+    if ( Verbose>5 ) printf("  free stats\n");
     for( i=0 ; i<obj->stats.faces ; i++ )
 	Free(obj->faces[i].Node);
     for( i=0 ; i<obj->stats.grps ; i++ )
@@ -1143,41 +1156,41 @@ void FreeObjFile(ObjFile *obj) {
     for( i=0 ; i<obj->stats.objs ; i++ )
 	Free(obj->objs[i].name);
 
-    if ( Verbose>12 ) printf("free faces\n");
+    if ( Verbose>5 ) printf("  free faces\n");
     Free(obj->faces); 
     
-    if ( Verbose>12 ) printf("free texts\n");
+    if ( Verbose>5 ) printf("  free texts\n");
     Free(obj->texts);
     
-    if ( Verbose>12 ) printf("free norms\n");
+    if ( Verbose>5 ) printf("  free norms\n");
     Free(obj->norms);
     
-    if ( Verbose>12 ) printf("free grps\n");
+    if ( Verbose>5 ) printf("  free grps\n");
     Free(obj->grps);
     
-    if ( Verbose>12 ) printf("free mats\n");
+    if ( Verbose>5 ) printf("  free mats\n");
     Free(obj->mats);
     
-    if ( Verbose>12 ) printf("free objs\n");
+    if ( Verbose>5 ) printf("  free objs\n");
     Free(obj->objs);
     
-    if ( Verbose>12 ) printf("free shds\n");
+    if ( Verbose>5 ) printf("  free shds\n");
     Free(obj->shds);
     
-    if ( Verbose>12 ) printf("free lib\n");
+    if ( Verbose>5 ) printf("  free lib\n");
     Free(obj->libs);
     
-    if ( Verbose>12 ) printf("free counts\n");   
+    if ( Verbose>5 ) printf("  free counts\n");   
     Free(obj->counts.verts);
     Free(obj->counts.norms);
     Free(obj->counts.texts);
     
-    if ( Verbose>12 ) printf("free order\n");  
+    if ( Verbose>5 ) printf("free order\n");  
     Free(obj->order.verts);
     Free(obj->order.texts);
     Free(obj->order.norms);
     
-    if ( Verbose>3 ) printf("free end\n");
+    if ( Verbose>4 ) printf("free end\n");
 }
 
 
@@ -1354,9 +1367,12 @@ void FilterVerts(ObjFile *obj, Vert min, Vert max) {
     // Unselected Verts are marked as unused (counts=NULL:IDX) or
     // translated to AABB border, depending on global SolidCut.
     int i, c;
+    int nVertsCut = 0;
     for( i=0 ; i<obj->stats.verts ; i++ ) {
+        int vertCut = 0;
 	for( c=0 ; c<3 ; c++ ) {
             if ( obj->verts[i][c]<min[c] ) {
+                vertCut = 1;
                 if ( ! SolidCut ) {
                     obj->counts.verts[i] = NULL_IDX;
                     break;
@@ -1364,6 +1380,7 @@ void FilterVerts(ObjFile *obj, Vert min, Vert max) {
                 else obj->verts[i][c] = min[c];
             }
             if ( obj->verts[i][c]>max[c] ) {
+                vertCut = 1;
                 if ( ! SolidCut ) {
                     obj->counts.verts[i] = NULL_IDX;
                     break;
@@ -1371,7 +1388,9 @@ void FilterVerts(ObjFile *obj, Vert min, Vert max) {
                 else obj->verts[i][c] = max[c];
             }
         }
+        nVertsCut += vertCut;
     }
+    if ( Verbose>0 ) printf("Vertexes cropped out: %d/%d (%.2f%%)\n", nVertsCut, obj->stats.verts, 100.f * (float)nVertsCut / (float)obj->stats.verts );
 }
 
 
@@ -1564,7 +1583,9 @@ void Usage() {
     fprintf(stderr,"\t\t-fy x z		   find Y coord for x,z vertical\n");
     fprintf(stderr,"\t\t-O outfile         output to outfile (default: stdout)\n");
     fprintf(stderr,"\t\t-e		   explode outfile into single objects\n");
-    fprintf(stderr,"\t\t-S shadow_file     shadow output to shadow_file (default: no shadow ouput)\n");
+    fprintf(stderr,"\t\t-Sy shadow_file    cast shadow in Y direction and output to shadow_file (default: no shadow ouput)\n");
+    fprintf(stderr,"\t\t-Sz shadow_file    cast shadow in Z direction and shadow output to shadow_file (default: no shadow ouput)\n");
+    fprintf(stderr,"\t\t-S shadow_file     cast shadow in Y direction and shadow output to shadow_file (default: no shadow ouput)\n");
     fprintf(stderr,"\t\t-v                 increase verbosity\n");
     fprintf(stderr,"\t\t-q                 quiet\n\n");
 }
@@ -1740,6 +1761,18 @@ int GetOptions(int argc, char** argv) {
 		    OutputFile = argv[i];
 		    break;
 		case 'S':
+		    switch (argv[i][2]) {
+                	case 'y':
+                	case 'Y':
+                	    upAxis = 'y';
+                	    break;
+                	case 'z':
+                	case 'Z':
+                	    upAxis = 'z';
+                	    break;
+                	default:
+                    	    upAxis = 'y';
+            	    }
 		    i++;
 		    ShadowOutputFile = argv[i];
 		    break;
@@ -1912,7 +1945,7 @@ void SaveImageMap(char *OutputFile, ObjFile *obj) {
     float delta[3];
     // float minV[3];
     // float maxV[3];
-    float minD = 1.e8;
+    float minD =  1.e8;
     int   minI = -1;
     float maxD = -1.e8;
     int   maxI = -1;
@@ -2051,26 +2084,18 @@ int main(int argc, char **argv) {
         if ( Verbose>3 ) printf("Creating Shadow Obj\n");
 	//ObjFile *Shadow = CreateShadowObj(&obj);
         ObjFile *Shadow = CreateShadowObj(&obj);
-        /*
-        for( int r=0 ; r<Shadow->stats.verts ; r++ )
-            printf("    v %f %f %f\n", Shadow->verts[r][0], Shadow->verts[r][1], Shadow->verts[r][2]);
-        */
-        //printf("stats1\n");
-         //PrintObjStats(&(Shadow->stats));
         SetUseCounters(Shadow);
-        //printf("stats2\n");
-         //PrintObjStats(&(Shadow->stats));
         SetIndexs(Shadow);
-        if ( Verbose>14 ) PrintObjStats(&(Shadow->stats));
+        if ( Verbose>4 ) PrintObjStats(&(Shadow->stats));
 	SaveObjFile(ShadowOutputFile, Shadow);
-        if ( Verbose>8 ) printf("saved\n");
+        if ( Verbose>4 ) printf("saved\n");
 	FreeObjFile(Shadow);
-	if ( Verbose>8 ) printf("Shadow file freed\n");
+	if ( Verbose>4 ) printf("Shadow file freed\n");
     }
-    if ( Verbose>12 ) printf("vai limpar verts\n");
+    if ( Verbose>4 ) printf("vai limpar verts\n");
     FreeObjFile(&obj);
     
-    if ( Verbose>12 ) printf("limpou verts\n");
+    if ( Verbose>4 ) printf("limpou verts\n");
     return 0;
 }
 		

@@ -25,7 +25,7 @@ void *Malloc(int n, size_t dim) {
 
 void Free(void *p) {
     if ( ! p ) {
-        if ( Verbose>=0 ) fprintf(stderr,"Cannot free unallocated memory\n");
+        if ( Verbose>3 ) fprintf(stderr, "    No need to free unallocated memory\n");
         return;
     }
 	long *tag_p = p-MEM_META_INFO_SIZE;
