@@ -344,6 +344,8 @@ ObjFile *CreateShadowObj(ObjFile *obj) {
     // New version using convex hull
     // Only works in y or z direction.
     // Result is always a convex poligon.
+    // ToDo: Support for non-convex shadow poligons.
+    //       This will require working with edges instead of vertexes. 
     
     int ycoord = 1;
     int zcoord = 2;
@@ -372,9 +374,9 @@ ObjFile *CreateShadowObj(ObjFile *obj) {
     // Add two texture coords
     shadow->stats.texts = 2;
     shadow->texts = Malloc(shadow->stats.texts, sizeof(Text));
-    shadow->texts[0][0] = 0.01;
+    shadow->texts[0][0] = 0.01;         // Dark texture point
     shadow->texts[0][1] = 0.01;
-    shadow->texts[1][0] = 0.91;
+    shadow->texts[1][0] = 0.91;         // Light texture point
     shadow->texts[1][1] = 0.91;
         
     // Add one MtlLib
@@ -420,13 +422,14 @@ ObjFile *CreateShadowObj(ObjFile *obj) {
    
    // Find surrounding convex polygon
    float xmax, ymax;
-   float xp = xmin;
-   float yp = ymin;
    float sum_x = 0.;
    float sum_y = 0.;
+   // Star at leftest point.
+   float xp = xmin;	// xx coord at current vertex (cursor).
+   float yp = ymin;	// yy coord at current vertex (cursor).
    // Looking from left to right
    while (1) {
-	double mmax = -MAX_FLOAT;
+	double mmax = -MAX_FLOAT;	// max slope
 	ymax = xmax = -MAX_FLOAT;
         // Find next vertex, with greatest slope
 	for( i=0 ; i<obj->stats.verts ; i++ ) {
@@ -440,7 +443,7 @@ ObjFile *CreateShadowObj(ObjFile *obj) {
 		ymax = y;
                 break;
             }
-	    double m = (y-yp)/(x-xp);
+	    double m = (y-yp)/(x-xp);	// slope
 	    if ( m>mmax ) {
 		mmax = m;
 		xmax = x;
@@ -449,10 +452,10 @@ ObjFile *CreateShadowObj(ObjFile *obj) {
 	}
         if ( Verbose>3 ) printf("    mmax: %f, x,y: %f, %f\n", mmax, xmax, ymax);
 	if ( mmax<=-MAX_FLOAT/2. ) {
-	    if ( Verbose>3 ) printf("    No next point.\n");
+	    if ( Verbose>3 ) printf("    No next point. Rightest point reched\n");
 	    break;
 	}
-	// new border vertex found
+	// new border vertex found at (xmax,ymax)
 	xp = xmax;
 	yp = ymax;
         sum_x += xmax;
@@ -505,9 +508,9 @@ ObjFile *CreateShadowObj(ObjFile *obj) {
    }
    
    // Add central vertex
-   float xmed = sum_x / shadow->stats.verts;
-   float ymed = sum_y / shadow->stats.verts;
    si = shadow->stats.verts;
+   float xmed = sum_x / si;
+   float ymed = sum_y / si;
    shadow->verts[si][0] = xmed;
    shadow->verts[si][ycoord] = ymed;
    shadow->stats.verts = si+1;
@@ -533,16 +536,16 @@ ObjFile *CreateShadowObj(ObjFile *obj) {
        shadow->faces[i].Node = Malloc(3, sizeof(FaceNode));
        shadow->faces[i].Node[0][0] = i+1;
        shadow->faces[i].Node[0][1] = 2;         // Light texture point
-       shadow->faces[i].Node[0][2] = 1;
+       shadow->faces[i].Node[0][2] = 1;		// Up normal vector
        shadow->faces[i].Node[1][0] = i+2;
        shadow->faces[i].Node[1][1] = 2;         // Light texture point
-       shadow->faces[i].Node[1][2] = 1;
+       shadow->faces[i].Node[1][2] = 1;		// Up normal vector
        // 3rd face node is always central vertex
        shadow->faces[i].Node[2][0] = shadow->stats.verts;
        shadow->faces[i].Node[2][1] = 1;         // Dark texture point
-       shadow->faces[i].Node[2][2] = 1;
+       shadow->faces[i].Node[2][2] = 1;		// Up normal vector
    }
-   shadow->faces[i-1].Node[1][0] = 1;   // Last polygon uses first vertex 
+   shadow->faces[i-1].Node[1][0] = 1;   	// Last polygon uses first vertex 
    if ( Verbose>2 ) printf("Shadow done\n");
    return shadow;
 }
@@ -831,80 +834,9 @@ ObjFile *CreateShadowObj_Projection(ObjFile *obj) {
             fprintf(stderr,"Too many vertexes in shadow\n");
             return shadow;
         }
-    }  // while(1)
-   
-    /*
-        // old part
-	for( i=0 ; i<obj->stats.verts ; i++ ) {
-	    float x = obj->verts[i][0];
-	    float y = obj->verts[i][ycoord];
-	    if ( x<xp ) continue;
-            if ( x==xp ) {      // Vertical
-                if ( y<=yp ) continue;
-                mmax = MAX_FLOAT;
-		xmax = x;
-		ymax = y;
-                break;
-            }
-	    double m = (y-yp)/(x-xp);
-	    if ( m>mmax ) {
-		mmax = m;
-		xmax = x;
-		ymax = y;
-	    }
-	}
-        printf("mmax: %f\n",mmax);
-	if ( mmax<=-MAX_FLOAT/2. ) break;
-	// new border vertex found
-	xp = xmax;
-	yp = ymax;
-        sum_x += xmax;
-        sum_y += ymax;
-	si = shadow->stats.verts;
-	shadow->verts[si][0] = xp;
-	shadow->verts[si][ycoord] = yp;
-	shadow->stats.verts = si+1;
-    }
-    */
-    /* comment to allow compiling
-    // Looking from right to left
-    while (1) {
-	double mmax = -MAX_FLOAT;
-	ymax = xmax = -MAX_FLOAT;
-        // Find next vertex, with largest slope
-	for( i=0 ; i<obj->stats.verts ; i++ ) {
-	    float x = obj->verts[i][0];
-	    float y = obj->verts[i][ycoord];
-	    if ( x>xp ) continue;
-            if ( x==xp ) {      // Vertical
-                if ( y>=yp ) continue;
-                mmax = MAX_FLOAT;
-		xmax = x;
-		ymax = y;
-                break;
-            }
-	    double m = (y-yp)/(x-xp);
-	    if ( m>mmax ) {
-		mmax = m;
-		xmax = x;
-		ymax = y;
-	    }
-	}
-        printf("mmax: %f\n",mmax);
-	if ( mmax<=-MAX_FLOAT/2. ) break;
-	// new border vertex found
-	xp = xmax;
-	yp = ymax;
-        sum_x += xmax;
-        sum_y += ymax;
-	si = shadow->stats.verts;
-	shadow->verts[si][0] = xp;
-	shadow->verts[si][ycoord] = yp;
-	shadow->stats.verts = si+1;
-    }
-    */
+    }  // while(1) 
+  
     printf("Shadow add central vertex. normal %f %f %f\n", shadow->norms[0][0], shadow->norms[0][1], shadow->norms[0][2]);
-
  
     if ( shadow->stats.verts<3 ) {
        fprintf(stderr,"Invalid shadow\n");
@@ -1257,22 +1189,22 @@ static int CleanFaces(ObjFile *obj) {
 	    if ( Material!=NULL ) {
 		while ( midx<=obj->stats.mats && i==obj->mats[midx].line )     midx++;
 		if ( Negate ) {
-			if ( midx && strcmp(Material,obj->mats[midx-1].name)==0 ) {
-			    obj->faces[i].nodes = 0;
-			    nRemFaces++;
-			    if ( Verbose>3 )
-                    	        printf("  Face %d removed.\n", i);
-			    continue;
-			}
+		    if ( midx && strcmp(Material,obj->mats[midx-1].name)==0 ) {
+			obj->faces[i].nodes = 0;
+			nRemFaces++;
+			if ( Verbose>3 )
+                    	    printf("  Face %d removed.\n", i);
+			continue;
+		    }
 		}
 		else {
-			if ( ! midx || strcmp(Material,obj->mats[midx-1].name)!=0 ) {
-			    obj->faces[i].nodes = 0;
-			    nRemFaces++;
-			    if ( Verbose>3 )
-                    	        printf("  Face %d removed.\n", i);
-			    continue;
-			}
+		    if ( ! midx || strcmp(Material,obj->mats[midx-1].name)!=0 ) {
+			obj->faces[i].nodes = 0;
+			nRemFaces++;
+			if ( Verbose>3 )
+                    	    printf("  Face %d removed.\n", i);
+			continue;
+		    }
 		}
 	    }
 	    if ( SelObjects>0 ) {
@@ -1280,22 +1212,22 @@ static int CleanFaces(ObjFile *obj) {
 		while ( oidx<=obj->stats.objs && i==obj->objs[oidx].line )     oidx++;
 		// Current Test implementation is limited to 1 object ( SelectObject[0] )
 		if ( Negate ) {
-			if ( oidx && strcmp(SelectObject[0],obj->objs[oidx-1].name)==0 ) {
-			    obj->faces[i].nodes = 0;
-			    nRemFaces++;
-			    if ( Verbose>3 )
-                    	        printf("  Face %d removed.\n", i);
-			    continue;
-			}
+		    if ( oidx && strcmp(SelectObject[0],obj->objs[oidx-1].name)==0 ) {
+			obj->faces[i].nodes = 0;
+			nRemFaces++;
+			if ( Verbose>3 )
+                    	    printf("  Face %d removed.\n", i);
+			continue;
+		    }
 		}
 		else {
-			if ( ! oidx || strcmp(SelectObject[0],obj->objs[oidx-1].name)!=0 ) {
-			    obj->faces[i].nodes = 0;
-			    nRemFaces++;
-			    if ( Verbose>3 )
-                    	        printf("  Face %d removed.\n", i);
-			    continue;
-			}
+		    if ( ! oidx || strcmp(SelectObject[0],obj->objs[oidx-1].name)!=0 ) {
+			obj->faces[i].nodes = 0;
+			nRemFaces++;
+			if ( Verbose>3 )
+                    	    printf("  Face %d removed.\n", i);
+			continue;
+		    }
 		}
 	    }
 	    if ( SelGroups>0 ) {
@@ -1303,22 +1235,22 @@ static int CleanFaces(ObjFile *obj) {
 		while ( gidx<=obj->stats.grps && i==obj->grps[gidx].line )     gidx++;
 		// Current Test implementation is limited to 1 group ( SelectGroup[0] )
 		if ( Negate ) {
-			if ( gidx && strcmp(SelectGroup[0],obj->grps[gidx-1].name)==0 ) {
-			    obj->faces[i].nodes = 0;
-			    nRemFaces++;
-			    if ( Verbose>3 )
-                    	        printf("  Face %d removed.\n", i);
-			    continue;
-			}
+		    if ( gidx && strcmp(SelectGroup[0],obj->grps[gidx-1].name)==0 ) {
+			obj->faces[i].nodes = 0;
+			nRemFaces++;
+			if ( Verbose>3 )
+                    	    printf("  Face %d removed.\n", i);
+			continue;
+		    }
 		}
 		else {
-			if ( ! gidx || strcmp(SelectGroup[0],obj->grps[gidx-1].name)!=0 ) {
-			    obj->faces[i].nodes = 0;
-			    nRemFaces++;
-			    if ( Verbose>3 )
-                    	        printf("  Face %d removed.\n", i);
-			    continue;
-			}
+		    if ( ! gidx || strcmp(SelectGroup[0],obj->grps[gidx-1].name)!=0 ) {
+			obj->faces[i].nodes = 0;
+			nRemFaces++;
+			if ( Verbose>3 )
+                    	    printf("  Face %d removed.\n", i);
+			continue;
+		    }
 		}
 	    }
 	    // Remove face if it includes inexistent vertexs.
@@ -1406,9 +1338,9 @@ void  vertCrossProduct(ObjFile *obj, int nFace, int n0, Vert cross) {
     int i2 = face.Node[n2][0];
 
     if ( i1<1 || i1>obj->stats.verts ) 
-            return;
+        return;
     if ( i2<1 || i2>obj->stats.verts ) 
-	    return;	
+	return;	
 
     vec3f v0, v1, v2;
     vec3f_copy(v0, obj->verts[i0-1]);
@@ -1552,12 +1484,12 @@ void ProcVerts(ObjFile *obj) {
 void Usage() {
     fprintf(stderr,"Usage:\n\tObjTool [options] inputfile1.obj inputfile2.obj ...\n");
     fprintf(stderr,"\t\t-i                 file info\n");
-    fprintf(stderr,"\t\t-xmin value        define xmin\n");
-    fprintf(stderr,"\t\t-xmax value        define xmax\n");
-    fprintf(stderr,"\t\t-ymin value        define ymin\n");
-    fprintf(stderr,"\t\t-ymax value        define ymax\n");
-    fprintf(stderr,"\t\t-zmin value        define zmin\n");
-    fprintf(stderr,"\t\t-zmax value        define zmax\n");
+    fprintf(stderr,"\t\t-xmin value        crop faces at xmin\n");
+    fprintf(stderr,"\t\t-xmax value        crop faces at xmax\n");
+    fprintf(stderr,"\t\t-ymin value        crop faces at ymin\n");
+    fprintf(stderr,"\t\t-ymax value        crop faces at ymax\n");
+    fprintf(stderr,"\t\t-zmin value        crop faces at zmin\n");
+    fprintf(stderr,"\t\t-zmax value        crop faces at zmax\n");
     fprintf(stderr,"\t\t-o name            select object\n");
     fprintf(stderr,"\t\t-g name            select obj group\n");
     fprintf(stderr,"\t\t-m name	           select material\n");
@@ -1574,7 +1506,7 @@ void Usage() {
     fprintf(stderr,"\t\t-Ni    		   invert all normals\n");
     fprintf(stderr,"\t\t-Nc    		   invert wrong facing normals\n");
     fprintf(stderr,"\t\t-Ns    		   resort face vertexes to match poligon normal\n");
-    fprintf(stderr,"\t\t-Nx    		   x can be a number [0,7] dening a biwise combination of 'sci' options\n");
+    fprintf(stderr,"\t\t-Nx    		   x can be a number [0,7] defining a biwise combination of 'sci' options\n");
     fprintf(stderr,"\t\t-R                 use relative coords\n");
     fprintf(stderr,"\t\t-M		   do not output mtllib directives\n");
     fprintf(stderr,"\t\t-c                 solid cut\n");
@@ -1584,8 +1516,8 @@ void Usage() {
     fprintf(stderr,"\t\t-O outfile         output to outfile (default: stdout)\n");
     fprintf(stderr,"\t\t-e		   explode outfile into single objects\n");
     fprintf(stderr,"\t\t-Sy shadow_file    cast shadow in Y direction and output to shadow_file (default: no shadow ouput)\n");
-    fprintf(stderr,"\t\t-Sz shadow_file    cast shadow in Z direction and shadow output to shadow_file (default: no shadow ouput)\n");
-    fprintf(stderr,"\t\t-S shadow_file     cast shadow in Y direction and shadow output to shadow_file (default: no shadow ouput)\n");
+    fprintf(stderr,"\t\t-Sz shadow_file    cast shadow in Z direction and output to shadow_file (default: no shadow ouput)\n");
+    fprintf(stderr,"\t\t-S shadow_file     cast shadow in Y direction and output to shadow_file (default: no shadow ouput)\n");
     fprintf(stderr,"\t\t-v                 increase verbosity\n");
     fprintf(stderr,"\t\t-q                 quiet\n\n");
 }
