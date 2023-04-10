@@ -17,9 +17,9 @@ _________
 * Invert / correct vertex normal vectors
 
 _________
-### Dependences
-**ObjTool** is implemented in C from scratch. It does not have any special dependences.
-To build ObjTool you will only require a C compiler (usually gcc) and the linmath library.
+### Dependencies
+**ObjTool** is implemented in C from scratch. It does not have any special dependencies.
+To build ObjTool you will only require a C compiler (usually gcc) and the *linmath* library.
 
 _________
 ### Download / Build / Install
