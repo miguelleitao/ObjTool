@@ -19,7 +19,7 @@ _________
 _________
 ### Dependencies
 **ObjTool** is implemented in C from scratch. It does not have any special dependencies.
-To build ObjTool you will only require a C compiler (usually gcc) and the *linmath* library.
+To build ObjTool you will only require a C compiler (usually **gcc**) and the **linmath** library.
 
 _________
 ### Download / Build / Install
@@ -33,7 +33,7 @@ _________
 _________
 ### Usage
 ```
-ObjTool [options] inputfile1.obj inputfile2.obj
+ObjTool [options] inputfile1.obj [inputfile2.obj] ...
     Options:
       -i                  file info
       -xmin value         define xmin
@@ -62,10 +62,12 @@ ObjTool [options] inputfile1.obj inputfile2.obj
       -R                  use relative coords    
       -M                  Do not output mtllib directives
       -c                  solid cut
-      -n                  negate face filter condition( -g,-m )
+      -n                  negate face filter condition( -g, -m )
       -O outfile          output to outfile (default: stdout)
       -e                  Explode outfile into single objects
       -S shadow_file      shadow output to shadow_file (default: no shadow ouput)
       -v                  increase verbosity
       -q                  quiet
 ```
+
+Inputfiles are combined before processing. Result is sent to stdout or to outfile if -O option is provided.
