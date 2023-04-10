@@ -34,37 +34,38 @@ _________
 ### Usage
 ```
 ObjTool [options] inputfile1.obj inputfile2.obj
-    -i                  file info
-    -xmin value         define xmin
-    -xmax value         define xmax
-    -ymin value         define ymin
-    -ymax value         define ymax
-    -zmin value         define zmin
-    -zmax value         define zmax
-    -o name             select object
-    -g name 	        select obj group
-    -m name             select material
-    -tx value	        translate x
-    -ty value	        translate y
-    -tz value	        translate z
-    -sx value	        scale x
-    -sy value	        scale y
-    -sz value	        scale z
-    -s value	        global scale
-    -rx value	        rotate around xx axis
-    -ry value	        rotate around yy axis
-    -rz value	        rotate around zz axis
-    -Ni			invert all normals
-    -Nc			invert vertex normals that do not match edge sequence
-    -Ns			invert vertex order to match poligon normal
-    -Nx			x can be a number [0,7], defining a bitwise combination of the 'sci' options.
-    -R                  use relative coords    
-    -M	                Do not output mtllib directives
-    -c                  solid cut
-    -n                  negate face filter condition( -g,-m )
-    -O outfile          output to outfile (default: stdout)
-    -e                  Explode outfile into single objects
-    -S shadow_file      shadow output to shadow_file (default: no shadow ouput)
-    -v                  increase verbosity
-    -q                  quiet
+    Options:
+      -i                  file info
+      -xmin value         define xmin
+      -xmax value         define xmax
+      -ymin value         define ymin
+      -ymax value         define ymax
+      -zmin value         define zmin
+      -zmax value         define zmax
+      -o name             select object
+      -g name 	          select obj group
+      -m name             select material
+      -tx value	          translate x
+      -ty value	          translate y
+      -tz value	          translate z
+      -sx value	          scale x
+      -sy value	          scale y
+      -sz value	          scale z
+      -s value	          global scale
+      -rx value	          rotate around xx axis
+      -ry value	          rotate around yy axis
+      -rz value	          rotate around zz axis
+      -Ni                 invert all normals
+      -Nc                 invert vertex normals that do not match edge sequence
+      -Ns                 invert vertex order to match poligon normal
+      -Nx                 x can be a number [0,7], defining a bitwise combination of the 'sci' options.
+      -R                  use relative coords    
+      -M                  Do not output mtllib directives
+      -c                  solid cut
+      -n                  negate face filter condition( -g,-m )
+      -O outfile          output to outfile (default: stdout)
+      -e                  Explode outfile into single objects
+      -S shadow_file      shadow output to shadow_file (default: no shadow ouput)
+      -v                  increase verbosity
+      -q                  quiet
 ```
