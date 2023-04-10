@@ -15,8 +15,8 @@ ObjTool.h: linmath/linmath.h
 	touch $@
 
 linmath:
-	git submodule init
-	git submodule update
+	git submodule init --recursive
+	git submodule update --init --recursive --remote
 
 install: ObjTool
 	cp $^ /usr/local/bin
