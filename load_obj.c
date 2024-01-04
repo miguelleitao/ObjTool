@@ -129,7 +129,7 @@ int GetObjStats(char *fname, ObjStats *os) {
 			case 'v':
 				switch ( *(lptr+1) ) {
 					case ' ':
-						ReadVec3f(lptr+2,vtx);
+						ReadVec3f(lptr+2, vtx);
 						for( i=0 ; i<3 ; i++ ) {
 						    if ( vtx[i]<os->vmin[i] )	os->vmin[i] = vtx[i];
 						    if ( vtx[i]>os->vmax[i] )	os->vmax[i] = vtx[i];
@@ -140,7 +140,7 @@ int GetObjStats(char *fname, ObjStats *os) {
 						os->norms += 1;
 						break;
 					case 't':
-						ReadVec3f(lptr+3,vtx);
+						ReadVec2f(lptr+3, vtx);
 						for( i=0 ; i<2 ; i++ ) {
 						    if ( vtx[i]<os->tmin[i] )	os->tmin[i] = vtx[i];
 						    if ( vtx[i]>os->tmax[i] )	os->tmax[i] = vtx[i];
